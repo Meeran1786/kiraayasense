@@ -13,10 +13,10 @@ import { prisma } from "@/lib/prisma";
  */
 const patchSchema = z.object({
   name: z.string().min(1).optional(),
-  category: z.enum(["FLAT", "INDEPENDENT_HOUSE", "PG", "HOSTEL", "HOTEL_BUDGET", "HOTEL_LUXURY"]).optional(),
+  categoryId: z.string().uuid().optional(),
   status: z.enum(["PENDING_VERIFICATION", "APPROVED", "REJECTED", "MERGED", "UNPUBLISHED"]).optional(),
-  doorNumber: z.string().min(1).optional(),
-  street: z.string().min(1).optional(),
+  doorNumber: z.string().optional(),
+  street: z.string().optional(),
   district: z.string().min(1).optional(),
   state: z.string().min(1).optional(),
   pincode: z.string().min(1).optional(),
@@ -35,7 +35,27 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     );
   }
 
-  const property = await prisma.property.update({ where: { id: params.id }, data: parsed.data });
+  if (parsed.data.categoryId) {
+    // Businesses always sit in a sub-category: that's what picks the questions.
+    const category = await prisma.category.findUnique({ where: { id: parsed.data.categoryId } });
+    if (!category?.parentId) {
+      return NextResponse.json(
+        { error: { code: "VALIDATION", message: "Pick a sub-category, not a top-level category" } },
+        { status: 422 }
+      );
+    }
+  }
+
+  const { doorNumber, street, ...rest } = parsed.data;
+  const property = await prisma.property.update({
+    where: { id: params.id },
+    data: {
+      ...rest,
+      // An emptied address field is stored as null, not "".
+      ...(doorNumber !== undefined ? { doorNumber: doorNumber.trim() || null } : {}),
+      ...(street !== undefined ? { street: street.trim() || null } : {}),
+    },
+  });
 
   await prisma.auditLog.create({
     data: {

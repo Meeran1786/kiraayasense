@@ -8,7 +8,7 @@ export async function PopularLocalities() {
 
   return (
     <section className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-      <h2 className="mb-4 text-sm font-semibold text-[var(--ks-text)]">Popular localities in Bengaluru</h2>
+      <h2 className="mb-4 text-sm font-semibold text-[var(--ks-text)]">Popular localities</h2>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {popularLocalities.map((loc) => (
           <Link
@@ -20,7 +20,7 @@ export async function PopularLocalities() {
             <MapPin size={14} className="shrink-0 text-[var(--ks-text-muted)]" />
             <div className="min-w-0">
               <p className="truncate text-xs font-semibold text-[var(--ks-text)]">{loc.name}</p>
-              <p className="text-[11px] text-[var(--ks-text-faint)]">{loc.propertyCount} properties</p>
+              <p className="text-[11px] text-[var(--ks-text-faint)]">{loc.propertyCount} {loc.propertyCount === 1 ? "business" : "businesses"}</p>
             </div>
           </Link>
         ))}

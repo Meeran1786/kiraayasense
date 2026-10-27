@@ -8,9 +8,8 @@ import { useAuth } from "@/lib/authContext";
 import { SignInModal } from "@/components/auth/SignInModal";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { brand, brandGradient } from "@/lib/brand";
-import { CATEGORY_LABELS, CATEGORY_ORDER } from "@/lib/constants";
 
-export function Header() {
+export function Header({ navCategories }: { navCategories: { slug: string; name: string }[] }) {
   const { user, signOut } = useAuth();
   const [signInOpen, setSignInOpen] = useState(false);
   const [q, setQ] = useState("");
@@ -51,20 +50,20 @@ export function Header() {
               <input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                placeholder="Search by property, locality, or PIN code"
+                placeholder="Search businesses, categories, localities or PIN"
                 className="w-full bg-transparent text-sm text-[var(--ks-text)] placeholder:text-[var(--ks-text-faint)] focus:outline-none"
               />
             </div>
           </form>
 
           <nav className="hidden items-center gap-4 lg:flex">
-            {CATEGORY_ORDER.slice(0, 4).map((c) => (
+            {navCategories.slice(0, 4).map((c) => (
               <Link
-                key={c}
-                href={`/search?category=${c}`}
+                key={c.slug}
+                href={`/search?category=${c.slug}`}
                 className="whitespace-nowrap text-xs font-medium text-[var(--ks-text-muted)] transition-colors hover:text-[var(--ks-text)]"
               >
-                {CATEGORY_LABELS[c]}
+                {c.name}
               </Link>
             ))}
           </nav>
@@ -105,7 +104,7 @@ export function Header() {
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Search properties, locality, PIN"
+              placeholder="Search businesses, locality, PIN"
               className="w-full bg-transparent text-sm text-[var(--ks-text)] placeholder:text-[var(--ks-text-faint)] focus:outline-none"
             />
           </div>

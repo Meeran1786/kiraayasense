@@ -2,26 +2,27 @@
 
 import { Star } from "lucide-react";
 import { brand } from "@/lib/brand";
-import type { GrievanceCategoryKey } from "@/lib/reviewValidation";
 
 interface CategoryScoreSliderProps {
-  categoryKey: GrievanceCategoryKey;
+  questionKey: string;
   label: string;
+  helpText?: string | null;
   value: number; // 1–5
   onChange: (value: number) => void;
 }
 
-export function CategoryScoreSlider({ label, value, onChange, categoryKey }: CategoryScoreSliderProps) {
+export function CategoryScoreSlider({ label, helpText, value, onChange, questionKey }: CategoryScoreSliderProps) {
   const fillPct = ((value - 1) / 4) * 100;
 
   return (
-    <div className="flex flex-col gap-2 py-3" data-category={categoryKey}>
+    <div className="flex flex-col gap-2 py-3" data-question={questionKey}>
       <div className="flex items-center justify-between gap-3">
         <label
-          htmlFor={`score-${categoryKey}`}
+          htmlFor={`score-${questionKey}`}
           className="text-sm font-medium text-[var(--ks-text)]"
         >
           {label}
+          {helpText && <span className="block text-[11px] font-normal text-[var(--ks-text-faint)]">{helpText}</span>}
         </label>
         <div className="flex items-center gap-1" aria-hidden="true">
           {[1, 2, 3, 4, 5].map((star) => (
@@ -51,7 +52,7 @@ export function CategoryScoreSlider({ label, value, onChange, categoryKey }: Cat
           }}
         />
         <input
-          id={`score-${categoryKey}`}
+          id={`score-${questionKey}`}
           type="range"
           min={1}
           max={5}

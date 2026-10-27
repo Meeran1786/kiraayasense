@@ -1,23 +1,26 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { getCategoryTree } from "@/lib/db/categories";
 import { PropertyEditForm } from "./PropertyEditForm";
 
 export default async function EditPropertyPage({ params }: { params: { id: string } }) {
   const property = await prisma.property.findUnique({ where: { id: params.id } });
   if (!property) notFound();
+  const categories = await getCategoryTree();
 
   return (
     <div>
       <h1 className="text-xl font-bold text-[var(--ks-text)]">{property.name}</h1>
       <div className="mt-6">
         <PropertyEditForm
+          categories={categories}
           initial={{
             id: property.id,
             name: property.name,
-            category: property.category,
+            categoryId: property.categoryId,
             status: property.status,
-            doorNumber: property.doorNumber,
-            street: property.street,
+            doorNumber: property.doorNumber ?? "",
+            street: property.street ?? "",
             district: property.district,
             state: property.state,
             pincode: property.pincode,

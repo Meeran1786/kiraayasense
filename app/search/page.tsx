@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { searchProperties } from "@/lib/db/properties";
-import type { PropertyCategory } from "@/lib/constants";
+import { getCategoryTree } from "@/lib/db/categories";
 import { PropertyCard } from "@/components/property/PropertyCard";
 import { FilterSidebar } from "@/components/search/FilterSidebar";
 import { Footer } from "@/components/layout/Footer";
@@ -16,9 +16,10 @@ interface SearchPageProps {
 }
 
 export default async function SearchPage({ searchParams }: SearchPageProps) {
+  const categories = await getCategoryTree();
   const results = await searchProperties({
     q: searchParams.q,
-    category: searchParams.category as PropertyCategory | undefined,
+    category: searchParams.category,
     minRating: searchParams.minRating ? Number(searchParams.minRating) : undefined,
     sort: (searchParams.sort as "rating_desc" | "review_count_desc" | "newest") ?? "rating_desc",
   });
@@ -27,15 +28,15 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
     <main style={{ background: brand.navy, minHeight: "100vh" }}>
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
         <h1 className="text-xl font-bold text-[var(--ks-text)]">
-          {searchParams.q ? `Results for "${searchParams.q}"` : "All properties"}
+          {searchParams.q ? `Results for "${searchParams.q}"` : "All businesses"}
         </h1>
         <p className="mt-1 text-sm" style={{ color: "var(--ks-text-muted)" }}>
-          {results.length} propert{results.length === 1 ? "y" : "ies"} found
+          {results.length} business{results.length === 1 ? "" : "es"} found
         </p>
 
         <div className="mt-6 flex flex-col gap-6 sm:flex-row">
           <Suspense fallback={null}>
-            <FilterSidebar />
+            <FilterSidebar categories={categories} />
           </Suspense>
 
           <div className="flex-1">
@@ -44,7 +45,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                 className="rounded-xl border p-8 text-center text-sm"
                 style={{ borderColor: "var(--ks-border)", color: "var(--ks-text-faint)" }}
               >
-                No properties matched your search. Try a different locality or clear a filter.
+                No businesses matched your search. Try a different name or locality, or clear a filter.
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">

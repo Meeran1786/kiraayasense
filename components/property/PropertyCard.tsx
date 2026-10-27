@@ -2,10 +2,9 @@ import Link from "next/link";
 import { MapPin, ShieldCheck } from "lucide-react";
 import { PropertyThumb } from "./PropertyThumb";
 import { RatingBadge } from "./RatingBadge";
-import { CATEGORY_LABELS } from "@/lib/constants";
-import type { MockProperty } from "@/lib/db/properties";
+import type { DbProperty } from "@/lib/db/properties";
 
-export function PropertyCard({ property }: { property: MockProperty }) {
+export function PropertyCard({ property }: { property: DbProperty }) {
   return (
     <Link
       href={`/property/${property.id}`}
@@ -21,7 +20,8 @@ export function PropertyCard({ property }: { property: MockProperty }) {
         </div>
 
         <p className="text-xs" style={{ color: "var(--ks-text-muted)" }}>
-          {CATEGORY_LABELS[property.category]}
+          {property.parentCategoryName ? `${property.parentCategoryName} · ` : ""}
+          {property.categoryName}
         </p>
 
         <p className="flex items-center gap-1 text-xs" style={{ color: "var(--ks-text-faint)" }}>
@@ -30,7 +30,9 @@ export function PropertyCard({ property }: { property: MockProperty }) {
         </p>
 
         <div className="mt-auto flex items-center justify-between pt-2 text-xs" style={{ color: "var(--ks-text-faint)" }}>
-          <span>{property.approvedReviewCount} reviews</span>
+          <span>
+            {property.approvedReviewCount} review{property.approvedReviewCount === 1 ? "" : "s"}
+          </span>
           <span className="flex items-center gap-1" style={{ color: "oklch(70% 0.15 150)" }}>
             <ShieldCheck size={12} />
             {property.verifiedProofCount} verified

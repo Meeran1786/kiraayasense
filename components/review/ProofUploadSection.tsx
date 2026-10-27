@@ -5,7 +5,7 @@ import { FileImage, FileVideo, Loader2, CheckCircle2, XCircle, Trash2 } from "lu
 import { FileDropzone } from "./FileDropzone";
 import { uploadFile } from "@/lib/uploadClient";
 import { brand } from "@/lib/brand";
-import type { ProofType } from "@/lib/reviewValidation";
+import { PROOF_TYPES, PROOF_TYPE_LABELS, type ProofType } from "@/lib/reviewValidation";
 
 interface UploadItem {
   id: string;
@@ -23,6 +23,11 @@ interface ProofUploadItem extends UploadItem {
 }
 
 interface ProofUploadSectionProps {
+  // From the question set: housing keeps v1's mandatory proof of stay;
+  // elsewhere both are optional and a proof only earns the verified badge.
+  mediaRequired: boolean;
+  proofRequired: boolean;
+  defaultProofType: ProofType;
   onMediaChange: (storageKeys: string[]) => void;
   onProofChange: (proofs: { proofType: ProofType; storageKey: string; consented: true }[]) => void;
 }
@@ -33,13 +38,9 @@ function makeId() {
     : `upload-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-const PROOF_TYPE_OPTIONS: { value: ProofType; label: string }[] = [
-  { value: "UPI_TRANSACTION", label: "UPI transaction screenshot" },
-  { value: "RENT_RECEIPT", label: "Signed rent receipt" },
-  { value: "BANK_STATEMENT", label: "Bank statement excerpt" },
-];
+const PROOF_TYPE_OPTIONS = PROOF_TYPES.map((value) => ({ value, label: PROOF_TYPE_LABELS[value] }));
 
-export function ProofUploadSection({ onMediaChange, onProofChange }: ProofUploadSectionProps) {
+export function ProofUploadSection({ mediaRequired, proofRequired, defaultProofType, onMediaChange, onProofChange }: ProofUploadSectionProps) {
   const [mediaItems, setMediaItems] = useState<UploadItem[]>([]);
   const [proofItems, setProofItems] = useState<ProofUploadItem[]>([]);
 
@@ -96,7 +97,7 @@ export function ProofUploadSection({ onMediaChange, onProofChange }: ProofUpload
       file,
       progress: 0,
       status: "uploading",
-      proofType: "UPI_TRANSACTION",
+      proofType: defaultProofType,
       consented: false,
     }));
     setProofItems((prev) => [...prev, ...newItems]);
@@ -126,11 +127,16 @@ export function ProofUploadSection({ onMediaChange, onProofChange }: ProofUpload
       {/* Residency / condition proof — photos & video walkthroughs */}
       <div className="flex flex-col gap-2">
         <h3 className="text-sm font-semibold text-[var(--ks-text)]">
-          Property photos or video walkthrough <span style={{ color: brand.danger }}>*</span>
+          Photos or video{" "}
+          {mediaRequired ? (
+            <span style={{ color: brand.danger }}>*</span>
+          ) : (
+            <span className="font-normal text-[var(--ks-text-faint)]">(optional)</span>
+          )}
         </h3>
         <FileDropzone
           label="Drag & drop photos or a video"
-          helperText="At least 1 file required · JPG, PNG, or MP4 up to 200MB"
+          helperText={`${mediaRequired ? "At least 1 file required · " : ""}JPG, PNG, or MP4 up to 200MB`}
           accept="image/jpeg,image/png,video/mp4"
           onFilesSelected={uploadMedia}
         />
@@ -143,18 +149,23 @@ export function ProofUploadSection({ onMediaChange, onProofChange }: ProofUpload
         )}
       </div>
 
-      {/* Payment proof — the second mandatory proof class (FR-REV-4) */}
+      {/* Proof of the experience: payment, invoice, receipt (FR-REV-4) */}
       <div className="flex flex-col gap-2">
         <h3 className="text-sm font-semibold text-[var(--ks-text)]">
-          Payment proof <span style={{ color: brand.danger }}>*</span>
+          Proof{" "}
+          {proofRequired ? (
+            <span style={{ color: brand.danger }}>*</span>
+          ) : (
+            <span className="font-normal text-[var(--ks-text-faint)]">(optional, earns a "Proof verified" badge)</span>
+          )}
         </h3>
         <p className="text-xs text-[var(--ks-text-muted)]">
-          UPI transaction, signed rent receipt, or bank statement. Sensitive details (account numbers,
-          third-party names) are automatically blurred before your review is published.
+          A UPI transaction, receipt, invoice or bank statement that shows you dealt with this business.
+          Sensitive details (account numbers, third-party names) are blurred before your review is published.
         </p>
         <FileDropzone
-          label="Drag & drop a payment proof"
-          helperText="At least 1 file required · JPG, PNG, or PDF up to 20MB"
+          label="Drag & drop a proof"
+          helperText={`${proofRequired ? "At least 1 file required · " : ""}JPG, PNG, or PDF up to 20MB`}
           accept="image/jpeg,image/png,application/pdf"
           onFilesSelected={uploadProof}
         />
