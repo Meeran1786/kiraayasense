@@ -72,7 +72,14 @@ export function Header({ navCategories }: { navCategories: { slug: string; name:
             <ThemeToggle />
             {user ? (
               <div className="flex items-center gap-2">
-                <span className="hidden text-xs text-[var(--ks-text-muted)] sm:inline">Hi, {user.displayName}</span>
+                <Link
+                  href="/profile"
+                  className="flex items-center gap-1 text-xs text-[var(--ks-text-muted)] hover:text-[var(--ks-text)]"
+                  aria-label="Your profile"
+                >
+                  <UserCircle2 size={16} />
+                  <span className="hidden sm:inline">{user.displayName}</span>
+                </Link>
                 <button
                   type="button"
                   onClick={signOut}

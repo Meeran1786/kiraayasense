@@ -20,6 +20,8 @@ export interface DbReviewReason {
 export interface DbReview {
   id: string;
   reviewerInitial: string;
+  /** Set when the reviewer posted under their name and keeps a public profile. */
+  reviewer: { name: string; handle: string } | null;
   relationship: RelationshipKey;
   postedAgo: string;
   reasons: DbReviewReason[];
@@ -140,6 +142,10 @@ function hydrateProperty(p: PropertyWithRelations): DbProperty {
     return {
       id: review.id,
       reviewerInitial: review.isAnonymous ? "?" : (review.user.displayName?.trim().charAt(0) || "?").toUpperCase(),
+      reviewer:
+        !review.isAnonymous && review.user.profileVisibility === "PUBLIC" && review.user.handle
+          ? { name: review.user.displayName, handle: review.user.handle }
+          : null,
       relationship: review.relationship as RelationshipKey,
       postedAgo: timeAgo(review.createdAt),
       reasons: review.reasons.map((r) => ({

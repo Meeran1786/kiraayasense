@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { ImageIcon, ShieldCheck, ThumbsDown, ThumbsUp } from "lucide-react";
 import type { DbReview } from "@/lib/db/properties";
 import { RELATIONSHIP_BADGES } from "@/lib/relationships";
@@ -31,7 +32,17 @@ export function ReviewList({ reviews }: { reviews: DbReview[] }) {
               {review.reviewerInitial}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-[var(--ks-text)]">{RELATIONSHIP_BADGES[review.relationship]}</p>
+              <p className="text-sm font-medium text-[var(--ks-text)]">
+                {review.reviewer && (
+                  <>
+                    <Link href={`/u/${review.reviewer.handle}`} className="hover:underline">
+                      {review.reviewer.name}
+                    </Link>
+                    <span className="text-[var(--ks-text-faint)]"> · </span>
+                  </>
+                )}
+                {RELATIONSHIP_BADGES[review.relationship]}
+              </p>
               <p className="text-xs text-[var(--ks-text-faint)]">{review.postedAgo}</p>
             </div>
             {review.proofVerified && (

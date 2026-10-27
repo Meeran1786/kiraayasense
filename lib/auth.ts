@@ -2,6 +2,7 @@ import "server-only";
 import type { AuthOptions, Session } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import { prisma } from "@/lib/prisma";
+import { uniqueHandle } from "@/lib/db/users";
 
 /**
  * Real Google OAuth 2.0 sign-in (FR-AUTH-1). We deliberately do NOT use
@@ -42,15 +43,19 @@ export const authOptions: AuthOptions = {
       // creates a fresh one. Role/status are never set from OAuth claims —
       // every new account starts as USER; admin role is granted out-of-band
       // via `npm run make-admin -- <email>` (scripts/make-admin.ts).
+      // displayName is set from Google only on first sign-in; after that it
+      // belongs to the reviewer, who can change it on /profile.
+      const existing = await prisma.user.findUnique({ where: { primaryEmail: user.email } });
       await prisma.user.upsert({
         where: { primaryEmail: user.email },
         update: {
-          displayName: user.name ?? user.email,
           avatarStorageKey: user.image ?? undefined,
           primaryEmailVerifiedAt: new Date(),
+          handle: existing?.handle ? undefined : await uniqueHandle(user.email),
         },
         create: {
           displayName: user.name ?? user.email,
+          handle: await uniqueHandle(user.email),
           primaryEmail: user.email,
           primaryEmailVerifiedAt: new Date(),
           avatarStorageKey: user.image ?? undefined,
