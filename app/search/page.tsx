@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Suspense } from "react";
 import { searchProperties } from "@/lib/db/properties";
 import { getCategoryTree } from "@/lib/db/categories";
@@ -46,6 +47,14 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                 style={{ borderColor: "var(--ks-border)", color: "var(--ks-text-faint)" }}
               >
                 No businesses matched your search. Try a different name or locality, or clear a filter.
+                <p className="mt-3">
+                  <Link
+                    href={`/business/new${searchParams.q ? `?name=${encodeURIComponent(searchParams.q)}` : ""}`}
+                    className="font-semibold text-[var(--ks-text)] underline"
+                  >
+                    Can&apos;t find it? Add the business
+                  </Link>
+                </p>
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -53,6 +62,14 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                   <PropertyCard key={p.id} property={p} />
                 ))}
               </div>
+            )}
+            {results.length > 0 && (
+              <p className="mt-6 text-center text-xs text-[var(--ks-text-faint)]">
+                Not here?{" "}
+                <Link href="/business/new" className="underline">
+                  Add a business
+                </Link>
+              </p>
             )}
           </div>
         </div>

@@ -12,7 +12,8 @@
     "lint": "next lint",
     "db:setup": "bash scripts/db-setup.sh",
     "db:seed": "tsx prisma/seed.ts",
-    "make-admin": "tsx scripts/make-admin.ts"
+    "make-admin": "tsx scripts/make-admin.ts",
+    "import:places": "tsx scripts/import-places.ts"
   },
   "dependencies": {
     "next": "14.2.35",

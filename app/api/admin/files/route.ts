@@ -38,9 +38,15 @@ export async function GET(req: NextRequest) {
   if (kind === "proofs") {
     const session = await getServerSession(authOptions);
     const proof = await prisma.verificationProof.findFirst({ where: { storageKey: key } });
-    if (proof && session?.user?.id) {
+    const claim = proof ? null : await prisma.businessClaim.findFirst({ where: { proofStorageKey: key } });
+    if ((proof || claim) && session?.user?.id) {
       await prisma.auditLog.create({
-        data: { actorUserId: session.user.id, action: "PROOF_VIEWED", entityType: "VerificationProof", entityId: proof.id },
+        data: {
+          actorUserId: session.user.id,
+          action: "PROOF_VIEWED",
+          entityType: proof ? "VerificationProof" : "BusinessClaim",
+          entityId: (proof ?? claim)!.id,
+        },
       });
     }
   }

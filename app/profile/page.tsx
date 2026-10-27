@@ -4,7 +4,7 @@ import { getOwnProfile } from "@/lib/db/users";
 import { ProfileHeader } from "@/components/profile/ProfileHeader";
 import { ProfileEditor } from "@/components/profile/ProfileEditor";
 import { ProfileReviewList } from "@/components/profile/ProfileReviewList";
-import { ProfileSignInPrompt } from "@/components/profile/ProfileSignInPrompt";
+import { SignInPrompt } from "@/components/auth/SignInPrompt";
 import { Footer } from "@/components/layout/Footer";
 import { brand } from "@/lib/brand";
 
@@ -38,7 +38,7 @@ export default async function OwnProfilePage() {
             </section>
           </>
         ) : (
-          <ProfileSignInPrompt />
+          <SignInPrompt />
         )}
       </div>
       <Footer />

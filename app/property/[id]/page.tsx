@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { MapPin, IndianRupee } from "lucide-react";
+import { MapPin, IndianRupee, Globe } from "lucide-react";
 import { getPropertyById } from "@/lib/db/properties";
 import { relationshipsForCategory } from "@/lib/db/categories";
 import { PropertyThumb } from "@/components/property/PropertyThumb";
@@ -8,6 +8,7 @@ import { CategoryBreakdown } from "@/components/property/CategoryBreakdown";
 import { ReviewList } from "@/components/property/ReviewList";
 import { WriteReviewGate } from "@/components/property/WriteReviewGate";
 import { Footer } from "@/components/layout/Footer";
+import { SourceCredit } from "@/components/property/SourceCredit";
 import { brand } from "@/lib/brand";
 
 export default async function PropertyDetailPage({ params }: { params: { id: string } }) {
@@ -30,9 +31,19 @@ export default async function PropertyDetailPage({ params }: { params: { id: str
                   {property.categoryName}
                 </p>
                 <p className="mt-1 flex items-center gap-1 text-sm" style={{ color: "var(--ks-text-faint)" }}>
-                  <MapPin size={14} />
-                  {property.locality}, {property.district}, {property.state} — {property.pincode}
+                  <MapPin size={14} className="shrink-0" />
+                  {property.address ? `${property.address}, ` : ""}
+                  {property.locality}, {property.district}, {property.state}
+                  {property.pincode ? ` — ${property.pincode}` : ""}
                 </p>
+                {property.website && (
+                  <p className="mt-1 flex items-center gap-1 text-sm" style={{ color: "var(--ks-text-faint)" }}>
+                    <Globe size={13} className="shrink-0" />
+                    <a href={property.website} target="_blank" rel="noopener noreferrer nofollow" className="truncate hover:underline">
+                      {property.website.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")}
+                    </a>
+                  </p>
+                )}
                 {property.isHousing && property.approxRentMin !== null && property.approxRentMax !== null && (
                   <p className="mt-1 flex items-center gap-1 text-sm" style={{ color: "var(--ks-text-faint)" }}>
                     <IndianRupee size={13} />
@@ -70,6 +81,10 @@ export default async function PropertyDetailPage({ params }: { params: { id: str
                 relationships={relationships}
                 isHousing={property.isHousing}
               />
+
+              <div className="mt-3">
+                <SourceCredit propertyId={property.id} source={property.source} ownerVerified={property.ownerVerified} />
+              </div>
 
               <p className="mt-3 text-[11px] leading-relaxed" style={{ color: "var(--ks-text-faint)" }}>
                 Approval by KiraayaSense confirms this is a real, non-duplicate listing — it is not an

@@ -175,6 +175,33 @@ enum ProfileVisibility {
   PRIVATE // reviews show only an initial; /u/<handle> returns 404
 }
 
+enum DataSource {
+  USER // added by a signed-in user, moderated before it goes live
+  ADMIN
+  OSM // OpenStreetMap, ODbL: attribution required
+  OVERTURE // Overture Maps places, CDLA-Permissive-2.0
+  MCA // Ministry of Corporate Affairs company master data (data.gov.in, GODL)
+}
+
+enum ImportStatus {
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum ImportAction {
+  CREATED
+  UPDATED
+  MERGED // matched an existing listing from another source; nothing created
+  SKIPPED
+}
+
+enum BusinessClaimStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model User {
   id                     String            @id @default(uuid()) @db.Uuid
   displayName            String
@@ -205,6 +232,8 @@ model User {
   createdBanners      AdBanner[]
   auditLogEntries     AuditLog[]      @relation("AuditActor")
   exportJobs          ExportJob[]
+  businessClaims      BusinessClaim[] @relation("Claimant")
+  reviewedClaims      BusinessClaim[] @relation("ClaimReviewer")
 
   @@index([role, status])
   @@map("users")
@@ -268,11 +297,14 @@ model OtpChallenge {
 // Curated locality/PIN reference table used for autocomplete fallback and
 // fuzzy "did you mean" suggestions when a search yields no direct hits.
 model Locality {
-  id       String @id @default(uuid()) @db.Uuid
+  id       String                                 @id @default(uuid()) @db.Uuid
   name     String
   district String
   state    String
-  pincode  String
+  pincode  String // "" when unknown (localities created from map data)
+  // Centroid, set for localities imported from OpenStreetMap place nodes, so
+  // imported businesses can be assigned to their nearest locality.
+  location Unsupported("geography(Point, 4326)")?
 
   properties Property[]
 
@@ -388,6 +420,13 @@ model Property {
   unitCount     Int?
 
   ownerContactPhone String? // private; verification outreach only, never public
+  website           String?
+  cin               String? @unique // company identification number (MCA)
+
+  // Where the listing came from. Imported listings keep their source id so a
+  // re-import updates instead of duplicating, and their licence for attribution.
+  source    DataSource @default(USER)
+  sourceRef String? // e.g. "osm:node/123456", "overture:08f2..."
 
   submittedById        String      @db.Uuid
   claimedByUserId      String?     @db.Uuid
@@ -399,14 +438,17 @@ model Property {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  category         Category   @relation(fields: [categoryId], references: [id])
-  submittedBy      User       @relation("PropertySubmitter", fields: [submittedById], references: [id])
-  claimedBy        User?      @relation("PropertyClaimant", fields: [claimedByUserId], references: [id])
-  locality         Locality   @relation(fields: [localityId], references: [id])
-  mergedInto       Property?  @relation("PropertyMerge", fields: [mergedIntoPropertyId], references: [id])
-  mergedDuplicates Property[] @relation("PropertyMerge")
+  category         Category        @relation(fields: [categoryId], references: [id])
+  submittedBy      User            @relation("PropertySubmitter", fields: [submittedById], references: [id])
+  claimedBy        User?           @relation("PropertyClaimant", fields: [claimedByUserId], references: [id])
+  locality         Locality        @relation(fields: [localityId], references: [id])
+  mergedInto       Property?       @relation("PropertyMerge", fields: [mergedIntoPropertyId], references: [id])
+  mergedDuplicates Property[]      @relation("PropertyMerge")
   reviews          Review[]
+  claims           BusinessClaim[]
+  importRecords    ImportRecord[]
 
+  @@unique([source, sourceRef])
   @@index([status, categoryId])
   @@index([pincode])
   @@index([localityId])
@@ -648,3 +690,66 @@ model ExportJob {
 // indexes, CHECK constraints, the aggregates view) lives in the migration
 // files under prisma/migrations — see 0001_init/migration.sql.
 // ────────────────────────────────────────────────────────────────────────────
+
+/// One run of scripts/import-places.ts for one source and area.
+model ImportJob {
+  id         String       @id @default(uuid()) @db.Uuid
+  source     DataSource
+  area       String // region key or bbox, e.g. "bengaluru"
+  status     ImportStatus @default(RUNNING)
+  created    Int          @default(0)
+  updated    Int          @default(0)
+  merged     Int          @default(0)
+  skipped    Int          @default(0)
+  error      String?
+  startedAt  DateTime     @default(now())
+  finishedAt DateTime?
+
+  records ImportRecord[]
+
+  @@index([startedAt])
+  @@map("import_jobs")
+}
+
+model ImportRecord {
+  id         String       @id @default(uuid()) @db.Uuid
+  jobId      String       @db.Uuid
+  sourceRef  String
+  name       String
+  action     ImportAction
+  reason     String? // why it was skipped or merged
+  propertyId String?      @db.Uuid
+  createdAt  DateTime     @default(now())
+
+  job      ImportJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  property Property? @relation(fields: [propertyId], references: [id])
+
+  @@index([jobId, action])
+  @@map("import_records")
+}
+
+/// An owner or manager asking to manage a listing. A moderator checks the
+/// proof and approves; approval sets Property.claimedByUserId.
+model BusinessClaim {
+  id              String              @id @default(uuid()) @db.Uuid
+  propertyId      String              @db.Uuid
+  userId          String              @db.Uuid
+  claimantRole    String // "Owner", "Manager", "Authorised employee"
+  contactPhone    String // private; verification call only
+  workEmail       String?
+  proofStorageKey String? // proofs/<uuid>.(jpg|png|pdf), never public
+  message         String?
+  status          BusinessClaimStatus @default(PENDING)
+  decisionNote    String?
+  reviewedById    String?             @db.Uuid
+  reviewedAt      DateTime?
+  createdAt       DateTime            @default(now())
+
+  property   Property @relation(fields: [propertyId], references: [id])
+  user       User     @relation("Claimant", fields: [userId], references: [id])
+  reviewedBy User?    @relation("ClaimReviewer", fields: [reviewedById], references: [id])
+
+  @@index([status, createdAt])
+  @@index([propertyId])
+  @@map("business_claims")
+}

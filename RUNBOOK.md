@@ -100,6 +100,75 @@ land on the dashboard. From there:
 - **/admin/properties** — edit a listing's name, category, address fields,
   rent range, or status (approve/unpublish).
 
+## 6. Seed businesses from open data
+
+Business listings can be imported per city from three open sources. Every
+import creates listings as **pending**: nothing is public until a moderator
+spot-checks the batch at `/admin/imports` and clicks **Publish**. Re-running an
+import refreshes locations and websites; it never overwrites names or
+categories an admin or owner has corrected. Listings within 75 m of an
+existing one with a similar name are matched, not duplicated.
+
+Regions live in `lib/import/regions.ts` (bengaluru, hyderabad, pune, chennai,
+mumbai, delhi). Run imports on the server, not a laptop on a slow link.
+
+**OpenStreetMap** (ODbL; the credit is shown on each listing):
+
+```bash
+npm run import:places -- --source osm --region bengaluru --dry-run   # counts only
+npm run import:places -- --source osm --region bengaluru
+```
+
+This calls the public Overpass API (set `OVERPASS_URL` to use a mirror) and also
+saves neighbourhood centroids, which later imports use to assign localities.
+Run OSM first for a new city. Tag-to-category rules are in
+`lib/import/sources/osm.ts`.
+
+**Overture Maps places** (CDLA-Permissive-2.0). Overture publishes GeoParquet,
+so extract one city with [DuckDB](https://duckdb.org) first (check
+https://docs.overturemaps.org for the latest release and replace `<release>`):
+
+```sql
+INSTALL spatial; LOAD spatial; INSTALL httpfs; LOAD httpfs; SET s3_region='us-west-2';
+COPY (
+  SELECT id, names.primary AS name, categories.primary AS category, confidence,
+         ST_X(geometry) AS lon, ST_Y(geometry) AS lat,
+         addresses[1].freeform AS freeform, addresses[1].locality AS locality,
+         addresses[1].postcode AS postcode, websites[1] AS website
+  FROM read_parquet('s3://overturemaps-us-west-2/release/<release>/theme=places/type=place/*', hive_partitioning=1)
+  WHERE bbox.xmin BETWEEN 77.45 AND 77.78 AND bbox.ymin BETWEEN 12.83 AND 13.14
+) TO 'bengaluru-places.ndjson' (FORMAT JSON);
+```
+
+```bash
+npm run import:places -- --source overture --region bengaluru --file bengaluru-places.ndjson
+```
+
+The run prints the most common Overture categories it couldn't map; add them
+to `lib/import/sources/overture.ts` if they matter.
+
+**MCA company master data** (GODL-India), for employers such as automotive
+OEMs, Tier-1 suppliers, aerospace and IT companies. Download the company
+master CSV for the state from data.gov.in, then:
+
+```bash
+npm run import:places -- --source mca --region bengaluru --file Karnataka.csv
+```
+
+Companies are kept when they are active, their registered office pincode is in
+the region, and the industry code in their CIN maps to a sub-category
+(`lib/import/sources/mca.ts`). Registered offices are not always where people
+work, so spot-check these batches with care.
+
+**Google Places** is used only as a search aid on the "Add a business" form
+when `GOOGLE_PLACES_API_KEY` is set (enable "Places API (New)" in Google
+Cloud). Google's terms allow storing only the place ID, which is all we keep.
+It is billed per request; leave the key empty to turn it off.
+
+Owners claim listings at `/property/<id>/claim`; moderators verify them at
+`/admin/claims`. Businesses added by users wait at
+`/admin/properties?status=PENDING_VERIFICATION&source=USER`.
+
 ## What's still mocked or simplified
 
 - **Phone/email OTP sign-in** is still a local mock (any 6-digit code
