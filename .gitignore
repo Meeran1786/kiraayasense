@@ -1,0 +1,16 @@
+node_modules
+.next
+out
+.env
+.env.local
+*.local
+
+# Local file storage (uploaded review media + private payment proofs) —
+# real deployments swap this for S3/R2; never commit real uploads either way.
+/public/uploads/reviews/*
+!/public/uploads/reviews/.gitkeep
+/storage/private/proofs/*
+!/storage/private/proofs/.gitkeep
+
+npm-debug.log*
+.DS_Store

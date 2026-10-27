@@ -1,0 +1,66 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Theme tokens. Default (no data-theme attribute, or data-theme="dark") is
+ * dark — the brand's home turf (navy + coral/magenta gradient, per the
+ * approved logo). [data-theme="light"] overrides every token for the light
+ * variant. Components reference these exclusively through lib/brand.ts
+ * (which now exports var(--ks-*) strings instead of literal oklch values)
+ * or, for a handful of one-off borders/text shades not worth adding to
+ * brand.ts, directly as var(--ks-*) in their own inline styles.
+ */
+:root,
+:root[data-theme="dark"] {
+  --ks-bg: oklch(20% 0.03 260);
+  --ks-bg-elevated: oklch(22% 0.025 260);
+  --ks-bg-elevated-2: oklch(24% 0.025 260);
+  --ks-bg-input: oklch(18% 0.025 260);
+
+  --ks-border-soft: oklch(30% 0.02 260);
+  --ks-border: oklch(32% 0.02 260);
+  --ks-border-strong: oklch(36% 0.02 260);
+
+  --ks-text: oklch(97% 0.01 260);
+  --ks-text-muted: oklch(68% 0.02 260);
+  --ks-text-faint: oklch(55% 0.02 260);
+
+  --ks-coral: oklch(72% 0.19 25);
+  --ks-magenta: oklch(65% 0.20 340);
+  --ks-success: oklch(70% 0.19 150);
+  --ks-danger: oklch(62% 0.21 25);
+  --ks-warn: oklch(80% 0.15 85);
+}
+
+:root[data-theme="light"] {
+  --ks-bg: oklch(98% 0.004 260);
+  --ks-bg-elevated: oklch(100% 0 0);
+  --ks-bg-elevated-2: oklch(95% 0.006 260);
+  --ks-bg-input: oklch(96% 0.006 260);
+
+  --ks-border-soft: oklch(90% 0.008 260);
+  --ks-border: oklch(86% 0.01 260);
+  --ks-border-strong: oklch(78% 0.012 260);
+
+  --ks-text: oklch(20% 0.02 260);
+  --ks-text-muted: oklch(42% 0.02 260);
+  --ks-text-faint: oklch(50% 0.02 260);
+
+  --ks-coral: oklch(58% 0.18 25);
+  --ks-magenta: oklch(50% 0.19 340);
+  --ks-success: oklch(50% 0.15 150);
+  --ks-danger: oklch(52% 0.2 25);
+  --ks-warn: oklch(62% 0.15 85);
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--ks-bg);
+  color: var(--ks-text);
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
