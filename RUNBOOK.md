@@ -9,6 +9,8 @@ Run everything below in your own Mac Terminal, in the `kiraayasense` project
 folder — not through Claude, since installing Homebrew packages and running
 a long-lived dev server both need your actual Mac shell.
 
+For production, see [deploy/README.md](deploy/README.md).
+
 ## 1. Install Postgres + PostGIS (one-time)
 
 ```bash

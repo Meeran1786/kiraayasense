@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_USER: kiraaya
+          POSTGRES_PASSWORD: kiraaya
+          POSTGRES_DB: kiraayasense
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U kiraaya" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://kiraaya:kiraaya@localhost:5432/kiraayasense?schema=public
+      NEXTAUTH_URL: http://localhost:3000
+      NEXTAUTH_SECRET: ci-only-secret-not-used-anywhere-else
+      GOOGLE_CLIENT_ID: ci
+      GOOGLE_CLIENT_SECRET: ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Apply migrations to a fresh database
+        run: npx prisma migrate deploy
+      - name: Seed taxonomy and sample data
+        run: npx tsx prisma/seed.ts
+        env:
+          SEED_SAMPLE_DATA: "1"
+      - name: Import the fixture datasets
+        run: |
+          npm run import:places -- --source osm --region bengaluru --file scripts/fixtures/overpass-sample.json
+          npm run import:places -- --source overture --region bengaluru --file scripts/fixtures/overture-sample.ndjson
+          npm run import:places -- --source mca --region bengaluru --file scripts/fixtures/mca-sample.csv
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Build
+        run: npm run build
