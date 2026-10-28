@@ -28,7 +28,9 @@ export async function middleware(req: NextRequest) {
         { status: 403 }
       );
     }
-    return NextResponse.redirect(new URL("/admin/login", req.url));
+    // Behind nginx, req.url carries the internal address (localhost:3000), so
+    // build the redirect from the public site URL instead.
+    return NextResponse.redirect(new URL("/admin/login", process.env.NEXTAUTH_URL || req.url));
   }
 
   return NextResponse.next();
