@@ -1,0 +1,43 @@
+name: Deploy
+
+# Ships main to the droplet after CI passes. The SSH key in DEPLOY_SSH_KEY can
+# only run deploy/deploy.sh on the server (a forced command set up by
+# deploy/bootstrap.sh), so a leaked key can't do anything else.
+on:
+  workflow_run:
+    workflows: [CI]
+    branches: [main]
+    types: [completed]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Check the deploy secrets are set
+        env:
+          HOST: ${{ secrets.DEPLOY_HOST }}
+          KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          KNOWN: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          if [ -z "$HOST" ] || [ -z "$KEY" ] || [ -z "$KNOWN" ]; then
+            echo "::warning::DEPLOY_HOST, DEPLOY_SSH_KEY and DEPLOY_KNOWN_HOSTS aren't all set; skipping deploy. See deploy/README.md."
+            echo "SKIP=1" >> "$GITHUB_ENV"
+          fi
+      - name: Deploy over SSH
+        if: env.SKIP != '1'
+        env:
+          HOST: ${{ secrets.DEPLOY_HOST }}
+          KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          KNOWN: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/deploy && chmod 600 ~/.ssh/deploy
+          printf '%s\n' "$KNOWN" > ~/.ssh/known_hosts
+          ssh -i ~/.ssh/deploy -o BatchMode=yes kiraaya@"$HOST" deploy
