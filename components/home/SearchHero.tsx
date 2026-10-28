@@ -4,12 +4,11 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import { brand, brandGradient } from "@/lib/brand";
-import { CATEGORY_LABELS, CATEGORY_ORDER, type PropertyCategory } from "@/lib/constants";
 
-export function SearchHero() {
+export function SearchHero({ categories }: { categories: { slug: string; name: string }[] }) {
   const router = useRouter();
   const [q, setQ] = useState("");
-  const [category, setCategory] = useState<PropertyCategory | "">("");
+  const [category, setCategory] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,14 +24,14 @@ export function SearchHero() {
       style={{ background: `radial-gradient(120% 100% at 50% -20%, oklch(30% 0.06 25 / 0.35), transparent), ${brand.navy}` }}
     >
       <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--ks-text-muted)" }}>
-        Real tenants. Verified proof. No surprises.
+        Real customers, tenants and employees. Proof-backed reviews.
       </p>
       <h1 className="mx-auto mt-3 max-w-2xl text-3xl font-bold sm:text-4xl" style={{ color: brand.white }}>
-        Know the truth about a place before you pay a deposit
+        Know the truth about a business before you pay or join
       </h1>
       <p className="mx-auto mt-3 max-w-xl text-sm" style={{ color: "var(--ks-text-muted)" }}>
-        Search apartments, PGs, hostels, and hotels rated by real tenants across rent fairness, safety,
-        water, power backup, and more — every review backed by proof, not hearsay.
+        Homes and PGs, employers, hospitals, colleges, banks, service providers and more, rated on the
+        questions that matter for each, by people who dealt with them.
       </p>
 
       <form
@@ -45,21 +44,21 @@ export function SearchHero() {
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Property name, locality, district, or PIN code"
+            placeholder="Business name, category, locality, or PIN code"
             className="w-full bg-transparent text-sm text-[var(--ks-text)] placeholder:text-[var(--ks-text-faint)] focus:outline-none"
           />
         </div>
 
         <select
           value={category}
-          onChange={(e) => setCategory(e.target.value as PropertyCategory | "")}
+          onChange={(e) => setCategory(e.target.value)}
           className="rounded-xl px-3 py-2.5 text-sm text-[var(--ks-text)]"
           style={{ background: "var(--ks-bg-input)" }}
         >
-          <option value="" className="bg-[var(--ks-bg-elevated)]">All types</option>
-          {CATEGORY_ORDER.map((c) => (
-            <option key={c} value={c} className="bg-[var(--ks-bg-elevated)]">
-              {CATEGORY_LABELS[c]}
+          <option value="" className="bg-[var(--ks-bg-elevated)]">All categories</option>
+          {categories.map((c) => (
+            <option key={c.slug} value={c.slug} className="bg-[var(--ks-bg-elevated)]">
+              {c.name}
             </option>
           ))}
         </select>

@@ -9,7 +9,7 @@ export async function FeaturedProperties() {
   return (
     <section className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
       <div className="mb-4 flex items-end justify-between">
-        <h2 className="text-sm font-semibold text-[var(--ks-text)]">Top-rated by verified tenants</h2>
+        <h2 className="text-sm font-semibold text-[var(--ks-text)]">Top-rated by reviewers</h2>
         <Link href="/search" className="text-xs font-semibold" style={{ color: brand.coral }}>
           View all →
         </Link>

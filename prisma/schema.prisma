@@ -41,13 +41,24 @@ enum OtpChannel {
   EMAIL
 }
 
-enum PropertyCategory {
-  FLAT
-  INDEPENDENT_HOUSE
-  PG
-  HOSTEL
-  HOTEL_BUDGET
-  HOTEL_LUXURY
+// How the reviewer knows the business. Picks the question set (together
+// with the business's sub-category) — an employee and a customer of the
+// same company are asked different questions.
+enum Relationship {
+  TENANT_GUEST
+  CUSTOMER
+  EMPLOYEE
+  STUDENT_PARENT
+  PATIENT_FAMILY
+  VENDOR_SUPPLIER
+  JOB_APPLICANT
+}
+
+enum QuestionType {
+  STAR // 1–5, scored: feeds the business's rating
+  YES_NO
+  SINGLE_CHOICE
+  NUMBER
 }
 
 enum PropertyStatus {
@@ -72,16 +83,6 @@ enum ReviewStatus {
   SUSPENDED // approved, then suspended pending re-moderation after flags
 }
 
-enum GrievanceCategory {
-  VALUE_FOR_MONEY
-  LOCALITY_SAFETY
-  OWNER_RESPONSIVENESS
-  HYGIENE_CLEANLINESS
-  WATER_SUPPLY
-  ELECTRICITY_BACKUP
-  AMENITIES_LIFT
-}
-
 enum ReasonType {
   PRO
   CON
@@ -103,6 +104,8 @@ enum ProofType {
   UPI_TRANSACTION
   RENT_RECEIPT
   BANK_STATEMENT
+  INVOICE_RECEIPT
+  OTHER_DOCUMENT
 }
 
 enum ProofStatus {
@@ -170,7 +173,7 @@ enum ExportStatus {
 model User {
   id                     String     @id @default(uuid()) @db.Uuid
   displayName            String
-  avatarStorageKey        String?
+  avatarStorageKey       String?
   primaryEmail           String?    @unique
   primaryEmailVerifiedAt DateTime?
   primaryPhone           String?    @unique // E.164, e.g. +91XXXXXXXXXX
@@ -183,16 +186,16 @@ model User {
   createdAt              DateTime   @default(now())
   updatedAt              DateTime   @updatedAt
 
-  accounts          Account[]
-  sessions          Session[]
-  submittedProperties Property[]       @relation("PropertySubmitter")
-  claimedProperties Property[]         @relation("PropertyClaimant")
-  reviews           Review[]
-  reviewFlags       ReviewFlag[]
-  ownerResponses    OwnerResponse[]
-  createdBanners    AdBanner[]
-  auditLogEntries   AuditLog[]         @relation("AuditActor")
-  exportJobs        ExportJob[]
+  accounts            Account[]
+  sessions            Session[]
+  submittedProperties Property[]      @relation("PropertySubmitter")
+  claimedProperties   Property[]      @relation("PropertyClaimant")
+  reviews             Review[]
+  reviewFlags         ReviewFlag[]
+  ownerResponses      OwnerResponse[]
+  createdBanners      AdBanner[]
+  auditLogEntries     AuditLog[]      @relation("AuditActor")
+  exportJobs          ExportJob[]
 
   @@index([role, status])
   @@map("users")
@@ -256,7 +259,7 @@ model OtpChallenge {
 // Curated locality/PIN reference table used for autocomplete fallback and
 // fuzzy "did you mean" suggestions when a search yields no direct hits.
 model Locality {
-  id       String  @id @default(uuid()) @db.Uuid
+  id       String @id @default(uuid()) @db.Uuid
   name     String
   district String
   state    String
@@ -271,18 +274,96 @@ model Locality {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// Properties
+// Categories & question sets
+// ────────────────────────────────────────────────────────────────────────────
+
+// Two-level tree today (category → sub-category); parentId allows a third
+// level later without a schema change. Rows, not an enum, so admins can add
+// categories from the console without a release.
+model Category {
+  id            String         @id @default(uuid()) @db.Uuid
+  slug          String         @unique
+  name          String
+  parentId      String?        @db.Uuid
+  sortOrder     Int            @default(0)
+  isActive      Boolean        @default(true)
+  // Relationships a reviewer can pick for businesses in this category.
+  // Read from the top-level category; sub-categories inherit it.
+  relationships Relationship[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  parent       Category?     @relation("CategoryTree", fields: [parentId], references: [id])
+  children     Category[]    @relation("CategoryTree")
+  properties   Property[]
+  questionSets QuestionSet[]
+
+  @@index([parentId, sortOrder])
+  @@map("categories")
+}
+
+// The questions asked for one (category, relationship) pair. categoryId may
+// point at a sub-category, a top-level category (fallback for all its
+// sub-categories) or be null (generic fallback for the relationship).
+// Versioned: editing a set publishes a new version and deactivates the old
+// one, and every review keeps the version it answered.
+model QuestionSet {
+  id            String       @id @default(uuid()) @db.Uuid
+  categoryId    String?      @db.Uuid
+  relationship  Relationship
+  version       Int          @default(1)
+  title         String
+  isActive      Boolean      @default(true)
+  // Housing keeps v1's mandatory proof-of-stay; elsewhere proof is optional
+  // and only earns the "verified" badge.
+  proofRequired Boolean      @default(false)
+  mediaRequired Boolean      @default(false)
+  createdAt     DateTime     @default(now())
+
+  category  Category?  @relation(fields: [categoryId], references: [id])
+  questions Question[]
+  reviews   Review[]
+
+  @@unique([categoryId, relationship, version])
+  @@index([relationship, isActive])
+  @@map("question_sets")
+}
+
+model Question {
+  id            String       @id @default(uuid()) @db.Uuid
+  questionSetId String       @db.Uuid
+  // Stable metric key shared across sets and versions (e.g. VALUE_FOR_MONEY)
+  // — ratings aggregate per key, so the same key must mean the same thing
+  // wherever it's used.
+  key           String
+  label         String
+  helpText      String?
+  type          QuestionType
+  options       String[] // SINGLE_CHOICE only
+  required      Boolean      @default(true)
+  sortOrder     Int          @default(0)
+
+  questionSet QuestionSet    @relation(fields: [questionSetId], references: [id], onDelete: Cascade)
+  answers     ReviewAnswer[]
+
+  @@unique([questionSetId, key])
+  @@map("questions")
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Properties (shown to users as "businesses": any service business, not
+// only housing — the model name is kept to avoid churn in routes and code)
 // ────────────────────────────────────────────────────────────────────────────
 
 model Property {
-  id         String            @id @default(uuid()) @db.Uuid
+  id         String         @id @default(uuid()) @db.Uuid
   name       String
-  category   PropertyCategory
-  status     PropertyStatus    @default(PENDING_VERIFICATION)
+  categoryId String         @db.Uuid // a sub-category
+  status     PropertyStatus @default(PENDING_VERIFICATION)
 
-  doorNumber String
-  street     String
-  localityId String            @db.Uuid
+  doorNumber String?
+  street     String?
+  localityId String  @db.Uuid
   district   String
   state      String
   pincode    String
@@ -291,7 +372,7 @@ model Property {
   googlePlaceId String?
   // PostGIS geography point (lng, lat). Prisma models it as Unsupported —
   // see migrations/000_postgis.sql for the actual column + GIST index DDL.
-  location   Unsupported("geography(Point, 4326)")?
+  location      Unsupported("geography(Point, 4326)")?
 
   approxRentMin Int?
   approxRentMax Int?
@@ -299,16 +380,17 @@ model Property {
 
   ownerContactPhone String? // private; verification outreach only, never public
 
-  submittedById        String        @db.Uuid
-  claimedByUserId       String?       @db.Uuid
-  claimStatus           ClaimStatus   @default(UNCLAIMED)
-  mergedIntoPropertyId  String?       @db.Uuid
+  submittedById        String      @db.Uuid
+  claimedByUserId      String?     @db.Uuid
+  claimStatus          ClaimStatus @default(UNCLAIMED)
+  mergedIntoPropertyId String?     @db.Uuid
 
   rejectionReason String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  category         Category   @relation(fields: [categoryId], references: [id])
   submittedBy      User       @relation("PropertySubmitter", fields: [submittedById], references: [id])
   claimedBy        User?      @relation("PropertyClaimant", fields: [claimedByUserId], references: [id])
   locality         Locality   @relation(fields: [localityId], references: [id])
@@ -316,7 +398,7 @@ model Property {
   mergedDuplicates Property[] @relation("PropertyMerge")
   reviews          Review[]
 
-  @@index([status, category])
+  @@index([status, categoryId])
   @@index([pincode])
   @@index([localityId])
   @@map("properties")
@@ -332,6 +414,10 @@ model Review {
   userId     String       @db.Uuid
   status     ReviewStatus @default(PENDING_REVIEW)
 
+  relationship  Relationship
+  questionSetId String       @db.Uuid
+  isAnonymous   Boolean      @default(false)
+
   stayStartApprox DateTime? @db.Date
   stayEndApprox   DateTime? @db.Date
 
@@ -342,14 +428,15 @@ model Review {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  property        Property                @relation(fields: [propertyId], references: [id])
-  user            User                    @relation(fields: [userId], references: [id])
-  categoryScores  ReviewCategoryScore[]
-  reasons         ReviewReason[]
-  media           ReviewMedia[]
-  proofs          VerificationProof[]
-  flags           ReviewFlag[]
-  ownerResponse   OwnerResponse?
+  property      Property            @relation(fields: [propertyId], references: [id])
+  user          User                @relation(fields: [userId], references: [id])
+  questionSet   QuestionSet         @relation(fields: [questionSetId], references: [id])
+  answers       ReviewAnswer[]
+  reasons       ReviewReason[]
+  media         ReviewMedia[]
+  proofs        VerificationProof[]
+  flags         ReviewFlag[]
+  ownerResponse OwnerResponse?
 
   // One review per user per property within a cooldown window; enforced at
   // the application layer (180-day rule, FR-REV edge cases) since Postgres
@@ -359,24 +446,33 @@ model Review {
   @@map("reviews")
 }
 
-model ReviewCategoryScore {
-  id       String            @id @default(uuid()) @db.Uuid
-  reviewId String            @db.Uuid
-  category GrievanceCategory
-  score    Int // 1–5, enforced by a CHECK constraint (migrations/001_checks.sql)
+// One row per answered question. Exactly one value column is set, matching
+// the question's type; questionKey is copied from the question so ratings
+// can aggregate per key without joining through versions.
+model ReviewAnswer {
+  id          String   @id @default(uuid()) @db.Uuid
+  reviewId    String   @db.Uuid
+  questionId  String   @db.Uuid
+  questionKey String
+  starValue   Int? // 1–5, CHECK constraint in the init migration
+  boolValue   Boolean?
+  choiceValue String?
+  numberValue Float?
 
-  review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  review   Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  question Question @relation(fields: [questionId], references: [id])
 
-  @@unique([reviewId, category])
-  @@map("review_category_scores")
+  @@unique([reviewId, questionId])
+  @@index([questionKey])
+  @@map("review_answers")
 }
 
 model ReviewReason {
-  id       String            @id @default(uuid()) @db.Uuid
-  reviewId String            @db.Uuid
-  type     ReasonType
-  category GrievanceCategory
-  text     String // min 20 chars, enforced at the API layer (zod) + DB CHECK
+  id          String     @id @default(uuid()) @db.Uuid
+  reviewId    String     @db.Uuid
+  type        ReasonType
+  questionKey String // links the pro/con to one of the set's STAR questions
+  text        String // min 20 chars, enforced at the API layer (zod) + DB CHECK
 
   review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
 
@@ -385,18 +481,18 @@ model ReviewReason {
 }
 
 model ReviewMedia {
-  id             String      @id @default(uuid()) @db.Uuid
-  reviewId       String      @db.Uuid
-  kind           MediaKind
-  status         MediaStatus @default(PENDING)
-  storageKey     String // object storage key (S3/R2)
-  thumbnailKey   String?
-  mimeType       String
-  widthPx        Int?
-  heightPx       Int?
-  durationSec    Int?
-  byteSize       Int
-  createdAt      DateTime    @default(now())
+  id           String      @id @default(uuid()) @db.Uuid
+  reviewId     String      @db.Uuid
+  kind         MediaKind
+  status       MediaStatus @default(PENDING)
+  storageKey   String // object storage key (S3/R2)
+  thumbnailKey String?
+  mimeType     String
+  widthPx      Int?
+  heightPx     Int?
+  durationSec  Int?
+  byteSize     Int
+  createdAt    DateTime    @default(now())
 
   review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
 
@@ -427,13 +523,13 @@ model VerificationProof {
 }
 
 model ReviewFlag {
-  id             String         @id @default(uuid()) @db.Uuid
-  reviewId       String         @db.Uuid
-  flaggedByUserId String        @db.Uuid
-  reason         String
-  resolution     FlagResolution @default(OPEN)
-  resolvedAt     DateTime?
-  createdAt      DateTime       @default(now())
+  id              String         @id @default(uuid()) @db.Uuid
+  reviewId        String         @db.Uuid
+  flaggedByUserId String         @db.Uuid
+  reason          String
+  resolution      FlagResolution @default(OPEN)
+  resolvedAt      DateTime?
+  createdAt       DateTime       @default(now())
 
   review        Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
   flaggedByUser User   @relation(fields: [flaggedByUserId], references: [id])
@@ -451,8 +547,8 @@ model OwnerResponse {
   status            OwnerResponseStatus @default(PENDING_REVIEW)
   createdAt         DateTime            @default(now())
 
-  review         Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
-  respondedByUser User  @relation(fields: [respondedByUserId], references: [id])
+  review          Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  respondedByUser User   @relation(fields: [respondedByUserId], references: [id])
 
   @@map("owner_responses")
 }
@@ -523,14 +619,14 @@ model AuditLog {
 }
 
 model ExportJob {
-  id               String       @id @default(uuid()) @db.Uuid
-  requestedByUserId String      @db.Uuid
-  type             ExportType
-  status           ExportStatus @default(PENDING)
-  fileStorageKey   String?
-  errorMessage     String?
-  requestedAt      DateTime     @default(now())
-  completedAt      DateTime?
+  id                String       @id @default(uuid()) @db.Uuid
+  requestedByUserId String       @db.Uuid
+  type              ExportType
+  status            ExportStatus @default(PENDING)
+  fileStorageKey    String?
+  errorMessage      String?
+  requestedAt       DateTime     @default(now())
+  completedAt       DateTime?
 
   requestedByUser User @relation(fields: [requestedByUserId], references: [id])
 
@@ -539,26 +635,7 @@ model ExportJob {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// NOTE — required raw-SQL follow-up migrations (Prisma limitations):
-//
-// 1. migrations/000_postgis.sql
-//    CREATE EXTENSION IF NOT EXISTS postgis;
-//    CREATE EXTENSION IF NOT EXISTS pg_trgm;
-//    CREATE INDEX properties_location_gist
-//      ON properties USING GIST (location);
-//    CREATE INDEX properties_name_trgm
-//      ON properties USING GIN (name gin_trgm_ops);
-//    CREATE INDEX localities_name_trgm
-//      ON localities USING GIN (name gin_trgm_ops);
-//
-// 2. migrations/001_checks.sql
-//    ALTER TABLE review_category_scores
-//      ADD CONSTRAINT score_range CHECK (score BETWEEN 1 AND 5);
-//    ALTER TABLE review_reasons
-//      ADD CONSTRAINT reason_min_length CHECK (char_length(text) >= 20);
-//
-// 3. A materialized view `property_rating_aggregates` (property_id, category
-//    means, overall mean, approved_review_count), refreshed on review
-//    approval/suspension via a Postgres trigger or an application-level job
-//    queue hook — see implementation plan §"Aggregate ratings".
+// Raw SQL Prisma can't express (PostGIS/pg_trgm extensions, GIST/GIN
+// indexes, CHECK constraints, the aggregates view) lives in the migration
+// files under prisma/migrations — see 0001_init/migration.sql.
 // ────────────────────────────────────────────────────────────────────────────

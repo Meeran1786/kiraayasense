@@ -10,8 +10,8 @@ export default async function AdminDashboardPage() {
   ]);
 
   const cards = [
-    { label: "Live properties", value: propertyCount, href: "/admin/properties" },
-    { label: "Reviews awaiting moderation", value: pendingReviewCount, href: null },
+    { label: "Live businesses", value: propertyCount, href: "/admin/properties" },
+    { label: "Reviews awaiting moderation", value: pendingReviewCount, href: "/admin/reviews" },
     { label: "Active banners", value: activeBannerCount, href: "/admin/banners" },
     { label: "Admin/moderator accounts", value: adminCount, href: null },
   ];
@@ -20,8 +20,7 @@ export default async function AdminDashboardPage() {
     <div>
       <h1 className="text-xl font-bold text-[var(--ks-text)]">Dashboard</h1>
       <p className="mt-1 text-sm text-[var(--ks-text-muted)]">
-        Manage promotional banners and property listing details. Review moderation isn't built yet —
-        seeded/submitted reviews publish as APPROVED directly.
+        Moderate reviews, manage businesses, categories and question sets, and run promotional banners.
       </p>
 
       <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">

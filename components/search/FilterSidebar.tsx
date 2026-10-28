@@ -1,16 +1,20 @@
 "use client";
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { CATEGORY_LABELS, CATEGORY_ORDER, type PropertyCategory } from "@/lib/constants";
+import type { CategoryNode } from "@/lib/db/categories";
 
-export function FilterSidebar() {
+export function FilterSidebar({ categories }: { categories: CategoryNode[] }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const category = searchParams.get("category") as PropertyCategory | null;
+  const category = searchParams.get("category");
   const minRating = searchParams.get("minRating");
   const sort = searchParams.get("sort") ?? "rating_desc";
+
+  // The selected category's top-level parent, so its sub-categories stay
+  // listed whether the parent or one of its children is selected.
+  const openTop = categories.find((c) => c.slug === category || c.children.some((s) => s.slug === category));
 
   const updateParam = (key: string, value: string | null) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -36,20 +40,23 @@ export function FilterSidebar() {
       </div>
 
       <div>
-        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--ks-text-muted)]">Accommodation type</h3>
+        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--ks-text-muted)]">Category</h3>
         <div className="flex flex-col gap-1.5">
-          <FilterOption
-            label="All types"
-            active={!category}
-            onClick={() => updateParam("category", null)}
-          />
-          {CATEGORY_ORDER.map((c) => (
-            <FilterOption
-              key={c}
-              label={CATEGORY_LABELS[c]}
-              active={category === c}
-              onClick={() => updateParam("category", c)}
-            />
+          <FilterOption label="All categories" active={!category} onClick={() => updateParam("category", null)} />
+          {categories.map((c) => (
+            <div key={c.slug} className="flex flex-col gap-1">
+              <FilterOption label={c.name} active={category === c.slug} onClick={() => updateParam("category", c.slug)} />
+              {openTop?.slug === c.slug &&
+                c.children.map((s) => (
+                  <FilterOption
+                    key={s.slug}
+                    label={s.name}
+                    indent
+                    active={category === s.slug}
+                    onClick={() => updateParam("category", s.slug)}
+                  />
+                ))}
+            </div>
           ))}
         </div>
       </div>
@@ -72,12 +79,22 @@ export function FilterSidebar() {
   );
 }
 
-function FilterOption({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+function FilterOption({
+  label,
+  active,
+  indent,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  indent?: boolean;
+  onClick: () => void;
+}) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="rounded-lg px-2.5 py-1.5 text-left text-sm transition-colors"
+      className={`rounded-lg px-2.5 py-1.5 text-left text-sm transition-colors ${indent ? "ml-3 text-xs" : ""}`}
       style={
         active
           ? { background: "oklch(28% 0.05 25 / 0.4)", color: "oklch(85% 0.1 25)" }

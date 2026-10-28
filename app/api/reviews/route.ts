@@ -2,14 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { reviewSubmissionSchema } from "@/lib/reviewValidation";
+import { checkAgainstQuestionSet, reviewSubmissionSchema } from "@/lib/reviewValidation";
+import { relationshipsForCategory } from "@/lib/db/categories";
+import { resolveQuestionSet } from "@/lib/db/questionSets";
 
 /**
- * Real implementation of docs/API_CONTRACT.md "POST /api/reviews" — writes
- * to Postgres via Prisma instead of the old in-memory mock. Still runs the
- * exact same zod schema (7 category scores, 3+ reasons at 20+ chars, at
- * least one media file, at least one consented payment proof) as the
- * client-side validation in ReviewSubmissionModal.
+ * POST /api/reviews. Runs the same rules as the client form
+ * (lib/reviewValidation.ts): the shape check, then every answer checked
+ * against the question set the reviewer was shown, which must still be the
+ * current set for this business's category and the reviewer's relationship.
  *
  * FR-REV-1: requires an authenticated session — this is the actual
  * enforcement point, not just the UI gate in WriteReviewGate.
@@ -42,26 +43,57 @@ export async function POST(req: NextRequest) {
   const input = parsed.data;
 
   const property = await prisma.property.findUnique({ where: { id: input.propertyId } });
-  if (!property) {
+  if (!property || property.status !== "APPROVED") {
     return NextResponse.json(
-      { error: { code: "NOT_FOUND", message: "Property not found" } },
+      { error: { code: "NOT_FOUND", message: "Business not found" } },
       { status: 404 }
     );
   }
 
-  // One review per user per property within a 180-day cooldown (FR-REV edge
+  const allowedRelationships = await relationshipsForCategory(property.categoryId);
+  if (!allowedRelationships.includes(input.relationship)) {
+    return NextResponse.json(
+      { error: { code: "VALIDATION", message: "That relationship isn't offered for this business" } },
+      { status: 422 }
+    );
+  }
+
+  const questionSet = await resolveQuestionSet(property.categoryId, input.relationship);
+  if (!questionSet || questionSet.id !== input.questionSetId) {
+    return NextResponse.json(
+      { error: { code: "STALE_QUESTIONS", message: "The questions for this review were just updated. Reload the page and try again." } },
+      { status: 409 }
+    );
+  }
+
+  const problems = checkAgainstQuestionSet(input, questionSet);
+  if (problems.length > 0) {
+    return NextResponse.json(
+      { error: { code: "VALIDATION", message: problems[0], problems } },
+      { status: 422 }
+    );
+  }
+  const questionsById = new Map(questionSet.questions.map((q) => [q.id, q]));
+
+  // One review per user per business within a 180-day cooldown, unless the
+  // earlier one was rejected (FR-REV edge
   // cases) — enforced here at the application layer since Postgres can't
   // express a time-windowed uniqueness constraint declaratively.
   const cooldownStart = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000);
   const recentReview = await prisma.review.findFirst({
-    where: { propertyId: input.propertyId, userId: session.user.id, createdAt: { gte: cooldownStart } },
+    where: {
+      propertyId: input.propertyId,
+      userId: session.user.id,
+      createdAt: { gte: cooldownStart },
+      status: { not: "REJECTED" },
+    },
   });
   if (recentReview) {
     return NextResponse.json(
       {
         error: {
           code: "COOLDOWN",
-          message: "You've already reviewed this property in the last 180 days",
+          message: "You've already reviewed this business in the last 180 days",
         },
       },
       { status: 409 }
@@ -77,11 +109,24 @@ export async function POST(req: NextRequest) {
         userId: session.user.id,
         stayStartApprox: input.stayStartApprox ? new Date(input.stayStartApprox) : undefined,
         stayEndApprox: input.stayEndApprox ? new Date(input.stayEndApprox) : undefined,
-        categoryScores: {
-          create: input.categoryScores.map((c) => ({ category: c.category, score: c.score })),
+        relationship: input.relationship,
+        questionSetId: questionSet.id,
+        isAnonymous: input.isAnonymous,
+        answers: {
+          create: input.answers.map((a) => {
+            const question = questionsById.get(a.questionId)!;
+            return {
+              questionId: question.id,
+              questionKey: question.key,
+              starValue: question.type === "STAR" ? (a.value as number) : undefined,
+              boolValue: question.type === "YES_NO" ? (a.value as boolean) : undefined,
+              choiceValue: question.type === "SINGLE_CHOICE" ? (a.value as string) : undefined,
+              numberValue: question.type === "NUMBER" ? (a.value as number) : undefined,
+            };
+          }),
         },
         reasons: {
-          create: input.reasons.map((r) => ({ type: r.type, category: r.category, text: r.text })),
+          create: input.reasons.map((r) => ({ type: r.type, questionKey: r.questionKey, text: r.text })),
         },
         media: {
           create: input.mediaStorageKeys.map((key) => ({

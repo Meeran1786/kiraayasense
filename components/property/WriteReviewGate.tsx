@@ -7,8 +7,17 @@ import { useAuth } from "@/lib/authContext";
 import { SignInModal } from "@/components/auth/SignInModal";
 import { ReviewSubmissionModal } from "@/components/review/ReviewSubmissionModal";
 import { brand, brandGradient } from "@/lib/brand";
+import type { RelationshipKey } from "@/lib/relationships";
 
-export function WriteReviewGate({ propertyId, propertyName }: { propertyId: string; propertyName: string }) {
+interface WriteReviewGateProps {
+  propertyId: string;
+  propertyName: string;
+  categoryId: string;
+  relationships: RelationshipKey[];
+  isHousing: boolean;
+}
+
+export function WriteReviewGate({ propertyId, propertyName, categoryId, relationships, isHousing }: WriteReviewGateProps) {
   const { user } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
@@ -59,17 +68,19 @@ export function WriteReviewGate({ propertyId, propertyName }: { propertyId: stri
           <div>
             <p className="font-medium text-[var(--ks-text)]">Thanks — your review was submitted.</p>
             <p className="mt-0.5 text-xs text-[var(--ks-text-muted)]">
-              It'll appear here once our moderation team verifies your proof (usually within 48 hours).
+              It'll appear here once our moderation team has checked it (usually within 48 hours).
             </p>
           </div>
         </div>
       ) : (
         <>
-          <p className="text-sm font-semibold text-[var(--ks-text)]">Stayed here?</p>
+          <p className="text-sm font-semibold text-[var(--ks-text)]">
+            {isHousing ? "Stayed here?" : "Dealt with this business?"}
+          </p>
           <p className="mt-1 text-xs text-[var(--ks-text-muted)]">
             {user
-              ? "Share a verified review — you're signed in as " + user.displayName + "."
-              : "Sign in to submit a verified review with proof of your stay."}
+              ? "Share your experience — you're signed in as " + user.displayName + "."
+              : "Sign in to write a review. Reviews with proof get a verified badge."}
           </p>
           <button
             type="button"
@@ -86,7 +97,7 @@ export function WriteReviewGate({ propertyId, propertyName }: { propertyId: stri
       <SignInModal
         isOpen={signInOpen}
         onClose={() => setSignInOpen(false)}
-        reason="Sign in to submit a verified review — this keeps ratings honest and traceable to a real tenancy."
+        reason="Sign in to write a review — this keeps ratings honest and traceable to a real experience."
         googleCallbackUrl={googleCallbackUrl}
         onSignedIn={() => {
           setSignInOpen(false);
@@ -97,6 +108,9 @@ export function WriteReviewGate({ propertyId, propertyName }: { propertyId: stri
       <ReviewSubmissionModal
         propertyId={propertyId}
         propertyName={propertyName}
+        categoryId={categoryId}
+        relationships={relationships}
+        isHousing={isHousing}
         isOpen={reviewOpen}
         onClose={() => setReviewOpen(false)}
         onSubmitted={(id) => {

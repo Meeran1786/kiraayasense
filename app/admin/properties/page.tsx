@@ -3,13 +3,13 @@ import { prisma } from "@/lib/prisma";
 
 export default async function AdminPropertiesPage() {
   const properties = await prisma.property.findMany({
-    include: { locality: true },
+    include: { locality: true, category: { include: { parent: true } } },
     orderBy: { createdAt: "desc" },
   });
 
   return (
     <div>
-      <h1 className="text-xl font-bold text-[var(--ks-text)]">Properties</h1>
+      <h1 className="text-xl font-bold text-[var(--ks-text)]">Businesses</h1>
       <p className="mt-1 text-sm text-[var(--ks-text-muted)]">
         Fix a listing's name, category, address, or rent range, or take it down.
       </p>
@@ -32,7 +32,10 @@ export default async function AdminPropertiesPage() {
                     {p.name}
                   </Link>
                 </td>
-                <td className="px-4 py-2.5 text-[var(--ks-text-muted)]">{p.category}</td>
+                <td className="px-4 py-2.5 text-[var(--ks-text-muted)]">
+                  {p.category.parent ? `${p.category.parent.name} · ` : ""}
+                  {p.category.name}
+                </td>
                 <td className="px-4 py-2.5 text-[var(--ks-text-muted)]">{p.locality.name}</td>
                 <td className="px-4 py-2.5 text-[var(--ks-text-muted)]">{p.status}</td>
               </tr>

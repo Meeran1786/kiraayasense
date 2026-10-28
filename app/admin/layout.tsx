@@ -27,7 +27,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <nav className="flex items-center gap-4 text-xs font-medium" style={{ color: "var(--ks-text-muted)" }}>
             <Link href="/admin" className="hover:text-[var(--ks-text)]">Dashboard</Link>
             <Link href="/admin/banners" className="hover:text-[var(--ks-text)]">Banners</Link>
-            <Link href="/admin/properties" className="hover:text-[var(--ks-text)]">Properties</Link>
+            <Link href="/admin/reviews" className="hover:text-[var(--ks-text)]">Reviews</Link>
+            <Link href="/admin/properties" className="hover:text-[var(--ks-text)]">Businesses</Link>
+            <Link href="/admin/categories" className="hover:text-[var(--ks-text)]">Categories</Link>
+            <Link href="/admin/question-sets" className="hover:text-[var(--ks-text)]">Questions</Link>
           </nav>
           <div className="ml-auto flex items-center gap-3 text-xs" style={{ color: "var(--ks-text-muted)" }}>
             <Link href="/" className="hover:text-[var(--ks-text)]">← Back to site</Link>

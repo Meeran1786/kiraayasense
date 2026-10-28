@@ -50,10 +50,21 @@ npm install
 npm run db:setup
 ```
 
-`db:setup` creates the database, enables PostGIS/pg_trgm, runs the Prisma
-migration, applies the CHECK constraints + materialized view, and seeds the
-same six sample properties you've already seen in the app (now real rows in
-Postgres instead of in-memory mock data).
+`db:setup` creates the database and applies every migration in
+`prisma/migrations` (PostGIS/pg_trgm, tables, indexes, CHECK constraints and
+the ratings view), then seeds the category tree and question sets from
+`prisma/data/taxonomy.ts`.
+
+For local development, also load the fictional sample businesses and
+reviews (never do this in production):
+
+```bash
+SEED_SAMPLE_DATA=1 npm run db:seed
+```
+
+After a schema change, create a new migration with
+`npx prisma migrate dev --name <what-changed>` and commit it; production
+applies migrations with `npx prisma migrate deploy`.
 
 ## 5. Run the app and become an admin
 

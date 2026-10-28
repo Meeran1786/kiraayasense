@@ -1,16 +1,16 @@
 import { ImageIcon, ShieldCheck, ThumbsDown, ThumbsUp } from "lucide-react";
-import { GRIEVANCE_CATEGORIES } from "@/lib/reviewValidation";
-import type { MockReview } from "@/lib/db/properties";
+import type { DbReview } from "@/lib/db/properties";
+import { RELATIONSHIP_BADGES } from "@/lib/relationships";
 import { brand } from "@/lib/brand";
 
-export function ReviewList({ reviews }: { reviews: MockReview[] }) {
+export function ReviewList({ reviews }: { reviews: DbReview[] }) {
   if (reviews.length === 0) {
     return (
       <div
         className="rounded-xl border p-6 text-center text-sm"
         style={{ borderColor: "var(--ks-border)", color: "var(--ks-text-faint)" }}
       >
-        No approved reviews yet — be the first verified tenant to review this property.
+        No approved reviews yet. Be the first to review this business.
       </div>
     );
   }
@@ -31,7 +31,7 @@ export function ReviewList({ reviews }: { reviews: MockReview[] }) {
               {review.reviewerInitial}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-[var(--ks-text)]">Verified tenant</p>
+              <p className="text-sm font-medium text-[var(--ks-text)]">{RELATIONSHIP_BADGES[review.relationship]}</p>
               <p className="text-xs text-[var(--ks-text-faint)]">{review.postedAgo}</p>
             </div>
             {review.proofVerified && (
@@ -44,7 +44,6 @@ export function ReviewList({ reviews }: { reviews: MockReview[] }) {
 
           <ul className="mt-3 flex flex-col gap-1.5">
             {review.reasons.map((reason, idx) => {
-              const category = GRIEVANCE_CATEGORIES.find((c) => c.key === reason.category);
               const Icon = reason.type === "PRO" ? ThumbsUp : ThumbsDown;
               return (
                 <li key={idx} className="flex items-start gap-2 text-sm">
@@ -54,13 +53,24 @@ export function ReviewList({ reviews }: { reviews: MockReview[] }) {
                     style={{ color: reason.type === "PRO" ? brand.success : brand.danger }}
                   />
                   <span className="text-[var(--ks-text-muted)]">
-                    <span className="text-[var(--ks-text-faint)]">{category?.label}: </span>
+                    <span className="text-[var(--ks-text-faint)]">{reason.label}: </span>
                     {reason.text}
                   </span>
                 </li>
               );
             })}
           </ul>
+
+          {review.facts.length > 0 && (
+            <dl className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[11px]">
+              {review.facts.map((fact) => (
+                <div key={fact.label} className="flex gap-1">
+                  <dt className="text-[var(--ks-text-faint)]">{fact.label}</dt>
+                  <dd className="font-medium text-[var(--ks-text-muted)]">{fact.value}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
 
           {review.mediaCount > 0 && (
             <div className="mt-3 flex items-center gap-1.5 text-[11px] text-[var(--ks-text-faint)]">

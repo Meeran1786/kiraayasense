@@ -4,14 +4,14 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { brand, brandGradient } from "@/lib/brand";
-import { CATEGORY_LABELS, CATEGORY_ORDER } from "@/lib/constants";
+import type { CategoryNode } from "@/lib/db/categories";
 
 const STATUS_OPTIONS = ["PENDING_VERIFICATION", "APPROVED", "REJECTED", "MERGED", "UNPUBLISHED"] as const;
 
 export interface PropertyEditValues {
   id: string;
   name: string;
-  category: string;
+  categoryId: string;
   status: string;
   doorNumber: string;
   street: string;
@@ -22,7 +22,7 @@ export interface PropertyEditValues {
   approxRentMax: number;
 }
 
-export function PropertyEditForm({ initial }: { initial: PropertyEditValues }) {
+export function PropertyEditForm({ initial, categories }: { initial: PropertyEditValues; categories: CategoryNode[] }) {
   const router = useRouter();
   const [values, setValues] = useState(initial);
   const [busy, setBusy] = useState(false);
@@ -60,17 +60,21 @@ export function PropertyEditForm({ initial }: { initial: PropertyEditValues }) {
 
   return (
     <form onSubmit={handleSubmit} className="flex max-w-xl flex-col gap-4">
-      <Field label="Property name">
+      <Field label="Business name">
         <input required value={values.name} onChange={(e) => set("name", e.target.value)} className={inputCls} />
       </Field>
 
       <div className="grid grid-cols-2 gap-4">
         <Field label="Category">
-          <select value={values.category} onChange={(e) => set("category", e.target.value)} className={inputCls}>
-            {CATEGORY_ORDER.map((c) => (
-              <option key={c} value={c}>
-                {CATEGORY_LABELS[c]}
-              </option>
+          <select value={values.categoryId} onChange={(e) => set("categoryId", e.target.value)} className={inputCls}>
+            {categories.map((top) => (
+              <optgroup key={top.id} label={top.name}>
+                {top.children.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </select>
         </Field>
@@ -86,10 +90,10 @@ export function PropertyEditForm({ initial }: { initial: PropertyEditValues }) {
       </div>
 
       <Field label="Door / unit number">
-        <input required value={values.doorNumber} onChange={(e) => set("doorNumber", e.target.value)} className={inputCls} />
+        <input value={values.doorNumber} onChange={(e) => set("doorNumber", e.target.value)} className={inputCls} />
       </Field>
       <Field label="Street / address line">
-        <input required value={values.street} onChange={(e) => set("street", e.target.value)} className={inputCls} />
+        <input value={values.street} onChange={(e) => set("street", e.target.value)} className={inputCls} />
       </Field>
 
       <div className="grid grid-cols-3 gap-4">
@@ -105,7 +109,7 @@ export function PropertyEditForm({ initial }: { initial: PropertyEditValues }) {
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <Field label="Approx. rent min (₹/month)">
+        <Field label="Approx. rent min (₹/month, housing only)">
           <input
             type="number"
             min={0}
@@ -114,7 +118,7 @@ export function PropertyEditForm({ initial }: { initial: PropertyEditValues }) {
             className={inputCls}
           />
         </Field>
-        <Field label="Approx. rent max (₹/month)">
+        <Field label="Approx. rent max (₹/month, housing only)">
           <input
             type="number"
             min={0}

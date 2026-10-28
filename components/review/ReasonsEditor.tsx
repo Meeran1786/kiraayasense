@@ -2,7 +2,6 @@
 
 import { Plus, Trash2, ThumbsUp, ThumbsDown } from "lucide-react";
 import {
-  GRIEVANCE_CATEGORIES,
   MIN_REASONS,
   MIN_REASON_LENGTH,
   type ReasonDraft,
@@ -11,6 +10,9 @@ import { brand } from "@/lib/brand";
 
 interface ReasonsEditorProps {
   reasons: ReasonDraft[];
+  // The rated (STAR) questions of the current question set; each reason is
+  // about one of them.
+  topics: { key: string; label: string }[];
   onChange: (reasons: ReasonDraft[]) => void;
 }
 
@@ -20,11 +22,11 @@ function makeId() {
     : `reason-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-export function ReasonsEditor({ reasons, onChange }: ReasonsEditorProps) {
+export function ReasonsEditor({ reasons, topics, onChange }: ReasonsEditorProps) {
   const addReason = () => {
     onChange([
       ...reasons,
-      { id: makeId(), type: "CON", category: GRIEVANCE_CATEGORIES[0].key, text: "" },
+      { id: makeId(), type: "CON", questionKey: topics[0]?.key ?? "", text: "" },
     ]);
   };
 
@@ -106,14 +108,12 @@ export function ReasonsEditor({ reasons, onChange }: ReasonsEditorProps) {
                 </div>
 
                 <select
-                  value={reason.category}
-                  onChange={(e) =>
-                    updateReason(reason.id, { category: e.target.value as ReasonDraft["category"] })
-                  }
+                  value={reason.questionKey}
+                  onChange={(e) => updateReason(reason.id, { questionKey: e.target.value })}
                   className="rounded-md border bg-transparent px-2 py-1 text-xs text-[var(--ks-text)]"
                   style={{ borderColor: "var(--ks-border)" }}
                 >
-                  {GRIEVANCE_CATEGORIES.map((c) => (
+                  {topics.map((c) => (
                     <option key={c.key} value={c.key} className="bg-[var(--ks-bg-elevated)]">
                       {c.label}
                     </option>
