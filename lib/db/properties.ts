@@ -4,6 +4,8 @@ import { categoryIdsForSlug } from "@/lib/db/categories";
 import type { RelationshipKey } from "@/lib/relationships";
 import type { Prisma } from "@prisma/client";
 
+export type DataSourceKey = "USER" | "ADMIN" | "OSM" | "OVERTURE" | "MCA";
+
 /**
  * Read side for business ("property") pages, cards and search. Ratings are
  * computed per question key across every approved review, whatever question
@@ -20,6 +22,8 @@ export interface DbReviewReason {
 export interface DbReview {
   id: string;
   reviewerInitial: string;
+  /** Set when the reviewer posted under their name and keeps a public profile. */
+  reviewer: { name: string; handle: string } | null;
   relationship: RelationshipKey;
   postedAgo: string;
   reasons: DbReviewReason[];
@@ -47,6 +51,10 @@ export interface DbProperty {
   district: string;
   state: string;
   pincode: string;
+  address: string | null;
+  website: string | null;
+  source: DataSourceKey;
+  ownerVerified: boolean;
   approxRentMin: number | null;
   approxRentMax: number | null;
   overallRating: number;
@@ -140,6 +148,10 @@ function hydrateProperty(p: PropertyWithRelations): DbProperty {
     return {
       id: review.id,
       reviewerInitial: review.isAnonymous ? "?" : (review.user.displayName?.trim().charAt(0) || "?").toUpperCase(),
+      reviewer:
+        !review.isAnonymous && review.user.profileVisibility === "PUBLIC" && review.user.handle
+          ? { name: review.user.displayName, handle: review.user.handle }
+          : null,
       relationship: review.relationship as RelationshipKey,
       postedAgo: timeAgo(review.createdAt),
       reasons: review.reasons.map((r) => ({
@@ -173,6 +185,10 @@ function hydrateProperty(p: PropertyWithRelations): DbProperty {
     district: p.district,
     state: p.state,
     pincode: p.pincode,
+    address: [p.doorNumber, p.street].filter(Boolean).join(", ") || null,
+    website: p.website,
+    source: p.source as DataSourceKey,
+    ownerVerified: p.claimStatus === "VERIFIED",
     approxRentMin: p.approxRentMin,
     approxRentMax: p.approxRentMax,
     overallRating,
@@ -186,7 +202,7 @@ function hydrateProperty(p: PropertyWithRelations): DbProperty {
 
 export async function getFeaturedProperties(limit = 6): Promise<DbProperty[]> {
   const properties = await prisma.property.findMany({
-    where: { status: "APPROVED" },
+    where: { status: "APPROVED", reviews: { some: { status: "APPROVED" } } },
     include: propertyInclude,
   });
   return properties
@@ -204,6 +220,8 @@ export async function getPropertyById(id: string): Promise<DbProperty | null> {
   });
   return property ? hydrateProperty(property) : null;
 }
+
+export const SEARCH_LIMIT = 60;
 
 export interface SearchFilters {
   q?: string;
@@ -230,10 +248,13 @@ export async function searchProperties(filters: SearchFilters): Promise<DbProper
     where.categoryId = { in: await categoryIdsForSlug(filters.category) };
   }
 
+  // Imported data puts tens of thousands of listings in a city, so only the
+  // most-reviewed matches are loaded and ranked here.
   const properties = await prisma.property.findMany({
     where,
     include: propertyInclude,
-    orderBy: filters.sort === "newest" ? { createdAt: "desc" } : undefined,
+    orderBy: filters.sort === "newest" ? { createdAt: "desc" } : [{ reviews: { _count: "desc" } }, { name: "asc" }],
+    take: SEARCH_LIMIT,
   });
 
   let results = properties.map(hydrateProperty);

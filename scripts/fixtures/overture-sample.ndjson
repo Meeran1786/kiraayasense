@@ -1,0 +1,5 @@
+{"id":"08f000000000001","name":"Sample Care Hospital","category":"hospital","confidence":0.95,"lon":77.6231,"lat":12.9362,"freeform":"80 Feet Road","locality":"Bengaluru","postcode":"560034","website":null}
+{"id":"08f000000000002","name":"Fictional Fitness Diagnostics","category":"diagnostic_services","confidence":0.9,"lon":77.6400,"lat":12.9150,"freeform":"Sector 2","locality":"Bengaluru","postcode":"560102","website":"https://diag.example"}
+{"id":"08f000000000003","name":"Low Confidence Cafe","category":"cafe","confidence":0.4,"lon":77.6,"lat":12.95,"freeform":null,"locality":null,"postcode":null,"website":null}
+{"id":"08f000000000004","name":"Sample Andhra Meals","category":"indian_restaurant","confidence":0.85,"lon":77.6250,"lat":12.9340,"freeform":null,"locality":null,"postcode":null,"website":null}
+{"id":"08f000000000005","name":"Unknown Category Thing","category":"pet_groomer","confidence":0.9,"lon":77.6250,"lat":12.9340,"freeform":null,"locality":null,"postcode":null,"website":null}
