@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export function Footer() {
   return (
     <footer className="border-t px-4 py-8 sm:px-6" style={{ borderColor: "var(--ks-border-soft)" }}>
@@ -8,7 +10,16 @@ export function Footer() {
           policy. If you believe a review about your business is inaccurate or defamatory, contact our Grievance
           Officer for a takedown review.
         </p>
-        <p className="mt-2">© 2026 KiraayaSense · www.kiraayasense.com</p>
+        <p className="mt-2">
+          © 2026 KiraayaSense ·{" "}
+          <Link href="/privacy" className="underline">
+            Privacy
+          </Link>{" "}
+          ·{" "}
+          <Link href="/terms" className="underline">
+            Terms
+          </Link>
+        </p>
       </div>
     </footer>
   );
