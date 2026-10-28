@@ -8,7 +8,12 @@ import { brand } from "@/lib/brand";
 
 export async function generateMetadata({ params }: { params: { handle: string } }): Promise<Metadata> {
   const profile = await getPublicProfile(params.handle);
-  return { title: profile ? `${profile.displayName} (@${profile.handle}) — KiraayaSense` : "Reviewer not found" };
+  if (!profile) return { title: "Reviewer not found", robots: { index: false } };
+  return {
+    title: `${profile.displayName} (@${profile.handle}) — KiraayaSense`,
+    description: `${profile.displayName}'s reviews on KiraayaSense${profile.city ? `, from ${profile.city}` : ""}.`,
+    alternates: { canonical: `/u/${profile.handle}` },
+  };
 }
 
 export default async function PublicProfilePage({ params }: { params: { handle: string } }) {

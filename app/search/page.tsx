@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { searchProperties } from "@/lib/db/properties";
@@ -13,6 +14,27 @@ interface SearchPageProps {
     category?: string;
     minRating?: string;
     sort?: string;
+  };
+}
+
+export async function generateMetadata({ searchParams }: SearchPageProps): Promise<Metadata> {
+  const tree = await getCategoryTree();
+  const all = tree.flatMap((t) => [t, ...t.children]);
+  const category = searchParams.category ? all.find((c) => c.slug === searchParams.category) : undefined;
+  // Category pages are worth indexing; free-text and filtered searches are not.
+  const indexable = !searchParams.q && !searchParams.minRating && !searchParams.sort;
+  const title = category
+    ? `${category.name} reviews and ratings in India | KiraayaSense`
+    : searchParams.q
+      ? `"${searchParams.q}" — search | KiraayaSense`
+      : "Browse businesses | KiraayaSense";
+  return {
+    title,
+    description: category
+      ? `Compare ${category.name} across India on honest, proof-backed reviews from real customers, tenants and employees.`
+      : undefined,
+    alternates: { canonical: category ? `/search?category=${encodeURIComponent(category.slug)}` : "/search" },
+    robots: indexable ? undefined : { index: false, follow: true },
   };
 }
 

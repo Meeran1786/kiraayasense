@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+import { cache } from "react";
 import { notFound } from "next/navigation";
 import { MapPin, IndianRupee, Globe } from "lucide-react";
 import { getPropertyById } from "@/lib/db/properties";
@@ -10,14 +12,72 @@ import { WriteReviewGate } from "@/components/property/WriteReviewGate";
 import { Footer } from "@/components/layout/Footer";
 import { SourceCredit } from "@/components/property/SourceCredit";
 import { brand } from "@/lib/brand";
+import { SITE_URL } from "@/lib/site";
+
+// Metadata and the page both need the listing; load it once per request.
+const loadProperty = cache(getPropertyById);
+
+export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
+  const p = await loadProperty(params.id);
+  if (!p) return { title: "Business not found — KiraayaSense", robots: { index: false } };
+  const place = [p.locality, p.district].filter(Boolean).join(", ");
+  const title = `${p.name}, ${place} — ${p.categoryName} reviews | KiraayaSense`;
+  const rating =
+    p.approvedReviewCount > 0
+      ? `Rated ${p.overallRating.toFixed(1)}/5 from ${p.approvedReviewCount} review${p.approvedReviewCount === 1 ? "" : "s"}. `
+      : "";
+  const description = `${rating}Honest reviews of ${p.name}, ${p.categoryName} in ${place}, ${p.state}. Read what customers, tenants and employees say, or write your own.`;
+  return {
+    title,
+    description,
+    alternates: { canonical: `/property/${p.id}` },
+    openGraph: { title, description, url: `/property/${p.id}`, type: "website" },
+  };
+}
+
+/** schema.org data so search results can show the business, its address and stars. */
+function structuredData(p: NonNullable<Awaited<ReturnType<typeof getPropertyById>>>) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "LocalBusiness",
+    "@id": `${SITE_URL}/property/${p.id}`,
+    name: p.name,
+    url: `${SITE_URL}/property/${p.id}`,
+    ...(p.website ? { sameAs: [p.website] } : {}),
+    address: {
+      "@type": "PostalAddress",
+      ...(p.address ? { streetAddress: p.address } : {}),
+      addressLocality: p.locality,
+      addressRegion: p.state,
+      ...(p.pincode ? { postalCode: p.pincode } : {}),
+      addressCountry: "IN",
+    },
+    ...(p.approvedReviewCount > 0
+      ? {
+          aggregateRating: {
+            "@type": "AggregateRating",
+            ratingValue: p.overallRating.toFixed(1),
+            reviewCount: p.approvedReviewCount,
+            bestRating: 5,
+            worstRating: 1,
+          },
+        }
+      : {}),
+  };
+}
 
 export default async function PropertyDetailPage({ params }: { params: { id: string } }) {
-  const property = await getPropertyById(params.id);
+  const property = await loadProperty(params.id);
   if (!property) notFound();
   const relationships = await relationshipsForCategory(property.categoryId);
 
   return (
     <main style={{ background: brand.navy, minHeight: "100vh" }}>
+      <script
+        type="application/ld+json"
+        // "<" is escaped so a business name can't close the script tag.
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData(property)).replace(/</g, "\\u003c") }}
+      />
       <PropertyThumb tone={property.heroTone} name={property.name} className="h-56 w-full sm:h-72" />
 
       <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
