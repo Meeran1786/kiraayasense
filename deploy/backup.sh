@@ -18,6 +18,7 @@ set -a; source "$APP_DIR/.env"; set +a
 PG_URL="${DATABASE_URL%%\?*}"
 
 pg_dump --format=custom --no-owner --file="$BACKUP_DIR/db-$STAMP.dump" "$PG_URL"
+mkdir -p "$APP_DIR/public/uploads" "$APP_DIR/storage/private"
 tar -czf "$BACKUP_DIR/files-$STAMP.tar.gz" -C "$APP_DIR" public/uploads storage/private
 
 find "$BACKUP_DIR" -name 'db-*.dump' -mtime +"$KEEP_DAYS" -delete

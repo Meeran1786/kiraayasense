@@ -98,13 +98,15 @@ cp "$APP_DIR/deploy/nginx.conf" /etc/nginx/sites-available/kiraayasense
 sed -i "s/kiraayasense.com www.kiraayasense.com/$DOMAIN www.$DOMAIN/" /etc/nginx/sites-available/kiraayasense
 ln -sf /etc/nginx/sites-available/kiraayasense /etc/nginx/sites-enabled/kiraayasense
 rm -f /etc/nginx/sites-enabled/default
+# Upload folders (also in the repo as .gitkeep files, but make sure they exist).
+sudo -u "$APP_USER" mkdir -p "$APP_DIR/public/uploads/reviews" "$APP_DIR/storage/private/proofs"
 # nginx (www-data) must be able to read uploaded review media.
 chmod o+x "/home/$APP_USER" "$APP_DIR" "$APP_DIR/public"
 nginx -t && systemctl reload nginx
 
 echo "==> Nightly backup at 03:30 IST"
 CRON="0 22 * * * bash $APP_DIR/deploy/backup.sh >> /home/$APP_USER/backup.log 2>&1"
-( crontab -u "$APP_USER" -l 2>/dev/null | grep -v deploy/backup.sh; echo "$CRON" ) | crontab -u "$APP_USER" -
+( crontab -u "$APP_USER" -l 2>/dev/null | grep -v deploy/backup.sh || true; echo "$CRON" ) | crontab -u "$APP_USER" -
 
 echo "==> Auto-deploy key for GitHub Actions"
 ACTIONS_KEY=/root/kiraayasense-actions-key
