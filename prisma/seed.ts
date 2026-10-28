@@ -71,6 +71,8 @@ async function seedSampleData(categoryIds: Record<string, string>) {
     update: {},
     create: {
       displayName: "KiraayaSense Listings",
+      handle: "listings-team",
+      profileVisibility: "PRIVATE",
       primaryEmail: "seed-lister@kiraayasense.local",
       primaryEmailVerifiedAt: new Date(),
       role: "USER",
@@ -82,6 +84,8 @@ async function seedSampleData(categoryIds: Record<string, string>) {
     update: {},
     create: {
       displayName: "Priya S.",
+      handle: "priya-s",
+      city: "Bengaluru",
       primaryEmail: "seed-reviewer@kiraayasense.local",
       primaryEmailVerifiedAt: new Date(),
       role: "USER",

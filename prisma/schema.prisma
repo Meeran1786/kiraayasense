@@ -170,21 +170,30 @@ enum ExportStatus {
 // Identity & Access
 // ────────────────────────────────────────────────────────────────────────────
 
+enum ProfileVisibility {
+  PUBLIC // profile page and name on reviews are visible
+  PRIVATE // reviews show only an initial; /u/<handle> returns 404
+}
+
 model User {
-  id                     String     @id @default(uuid()) @db.Uuid
+  id                     String            @id @default(uuid()) @db.Uuid
   displayName            String
+  handle                 String?           @unique // public profile URL: /u/<handle>
+  city                   String?
+  bio                    String?
+  profileVisibility      ProfileVisibility @default(PUBLIC)
   avatarStorageKey       String?
-  primaryEmail           String?    @unique
+  primaryEmail           String?           @unique
   primaryEmailVerifiedAt DateTime?
-  primaryPhone           String?    @unique // E.164, e.g. +91XXXXXXXXXX
+  primaryPhone           String?           @unique // E.164, e.g. +91XXXXXXXXXX
   primaryPhoneVerifiedAt DateTime?
   alternateEmail         String?
   alternatePhone         String?
   passwordHash           String? // only set if the user opts into password auth
-  role                   UserRole   @default(USER)
-  status                 UserStatus @default(ACTIVE)
-  createdAt              DateTime   @default(now())
-  updatedAt              DateTime   @updatedAt
+  role                   UserRole          @default(USER)
+  status                 UserStatus        @default(ACTIVE)
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
 
   accounts            Account[]
   sessions            Session[]

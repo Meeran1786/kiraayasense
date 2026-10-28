@@ -29,7 +29,19 @@ install that version instead of 16.
 3. Create Credentials → OAuth client ID → Application type: **Web
    application**.
 4. Authorized redirect URI: `http://localhost:3000/api/auth/callback/google`
+   For production add `https://kiraayasense.com/api/auth/callback/google`
+   (and the `www.` variant if you serve it) to the same client, plus
+   `https://kiraayasense.com` under Authorized JavaScript origins.
 5. Copy the Client ID and Client Secret — you'll need them in step 3.
+6. Before launch, switch the consent screen from Testing to **In production**,
+   otherwise only listed test users can sign in. The app asks only for the
+   basic `openid email profile` scopes, so Google's verification review is
+   not needed.
+
+Each Google sign-in creates the reviewer's account on first visit with a
+handle derived from their email (e.g. `/u/ravi-k`). Reviewers can change
+their name, handle, city, bio and profile visibility at `/profile`; the name
+from Google is used only for the first sign-in.
 
 ## 3. Configure environment variables
 
