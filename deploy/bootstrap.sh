@@ -106,7 +106,7 @@ nginx -t && systemctl reload nginx
 
 echo "==> Nightly backup at 03:30 IST"
 CRON="0 22 * * * bash $APP_DIR/deploy/backup.sh >> /home/$APP_USER/backup.log 2>&1"
-( crontab -u "$APP_USER" -l 2>/dev/null | grep -v deploy/backup.sh; echo "$CRON" ) | crontab -u "$APP_USER" -
+( crontab -u "$APP_USER" -l 2>/dev/null | grep -v deploy/backup.sh || true; echo "$CRON" ) | crontab -u "$APP_USER" -
 
 echo "==> Auto-deploy key for GitHub Actions"
 ACTIONS_KEY=/root/kiraayasense-actions-key
