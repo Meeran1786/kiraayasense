@@ -5,6 +5,8 @@
  *   npm run import:places -- --source osm --region bengaluru --file overpass.json
  *   npm run import:places -- --source overture --region bengaluru --file places.ndjson
  *   npm run import:places -- --source mca --region bengaluru --file Karnataka.csv
+ *   npm run import:places -- --source osm --region all          # every city, one after another
+ *   npm run import:places -- --source osm --region pune,nagpur
  *
  * Add --dry-run to see the counts without writing anything. New listings
  * stay hidden until a moderator publishes the batch at /admin/imports.
@@ -12,7 +14,7 @@
  */
 import { readFileSync } from "node:fs";
 import { PrismaClient, type DataSource } from "@prisma/client";
-import { getRegion, REGIONS } from "../lib/import/regions";
+import { getRegion, REGIONS, type ImportRegion } from "../lib/import/regions";
 import { buildOverpassQuery, fetchOverpass, parseOsm, type OsmElement } from "../lib/import/sources/osm";
 import { readOverture } from "../lib/import/sources/overture";
 import { readMca } from "../lib/import/sources/mca";
@@ -34,7 +36,7 @@ async function main() {
   const limit = arg("limit") ? Number(arg("limit")) : undefined;
 
   if (!sourceArg || !SOURCES[sourceArg] || !regionArg) {
-    console.error(`Usage: --source osm|overture|mca --region ${REGIONS.map((r) => r.key).join("|")} [--file path] [--limit n] [--dry-run]`);
+    console.error(`Usage: --source osm|overture|mca --region all|<key>[,<key>…] [--file path] [--limit n] [--dry-run]\nRegions: ${REGIONS.map((r) => r.key).join(", ")}`);
     process.exit(1);
   }
   if (sourceArg !== "osm" && !file) {
@@ -42,9 +44,44 @@ async function main() {
     process.exit(1);
   }
 
-  const region = getRegion(regionArg);
-  const source = SOURCES[sourceArg];
+  const regions = regionArg === "all" ? REGIONS : regionArg.split(",").map((k) => getRegion(k.trim()));
+  if (regions.length > 1 && file) {
+    console.error("--file works with one region at a time.");
+    process.exit(1);
+  }
+
   const prisma = new PrismaClient();
+  const failed: string[] = [];
+  try {
+    for (const [i, region] of regions.entries()) {
+      // Be polite to the public Overpass server between cities.
+      if (i > 0 && sourceArg === "osm" && !file) await new Promise((r) => setTimeout(r, 30_000));
+      if (regions.length > 1) console.log(`\n[${i + 1}/${regions.length}] ${region.city}`);
+      try {
+        await importRegion(prisma, region, SOURCES[sourceArg], sourceArg, { file, dryRun, limit });
+      } catch (err) {
+        // One city failing (e.g. an Overpass timeout) shouldn't stop the rest.
+        if (regions.length === 1) throw err;
+        console.error(`  ${region.city} failed: ${String(err).slice(0, 300)}`);
+        failed.push(region.key);
+      }
+    }
+  } finally {
+    await prisma.$disconnect();
+  }
+  if (failed.length) {
+    console.error(`\nFailed: ${failed.join(",")}. Re-run with --region ${failed.join(",")}`);
+    process.exit(1);
+  }
+}
+
+async function importRegion(
+  prisma: PrismaClient,
+  region: ImportRegion,
+  source: DataSource,
+  sourceArg: string,
+  { file, dryRun, limit }: { file?: string; dryRun: boolean; limit?: number }
+) {
   const log = (m: string) => console.log(m);
 
   let places: PlaceCandidate[] = [];
@@ -105,8 +142,6 @@ async function main() {
       });
     }
     throw err;
-  } finally {
-    await prisma.$disconnect();
   }
 }
 

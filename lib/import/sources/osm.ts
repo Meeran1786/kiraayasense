@@ -70,14 +70,19 @@ export function buildOverpassQuery(region: ImportRegion, rules: OsmRule[] = OSM_
 
 export async function fetchOverpass(query: string): Promise<OsmElement[]> {
   const url = process.env.OVERPASS_URL ?? "https://overpass-api.de/api/interpreter";
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded", "User-Agent": "KiraayaSense-importer/1.0" },
-    body: "data=" + encodeURIComponent(query),
-  });
-  if (!res.ok) throw new Error(`Overpass returned ${res.status}: ${(await res.text()).slice(0, 300)}`);
-  const body = (await res.json()) as { elements: OsmElement[] };
-  return body.elements;
+  // The public server answers 429/504 when busy; wait and try again.
+  for (let attempt = 1; ; attempt++) {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded", "User-Agent": "KiraayaSense-importer/1.0" },
+      body: "data=" + encodeURIComponent(query),
+    });
+    if (res.ok) return ((await res.json()) as { elements: OsmElement[] }).elements;
+    const detail = `Overpass returned ${res.status}: ${(await res.text()).slice(0, 300)}`;
+    if (attempt >= 3 || ![429, 502, 503, 504].includes(res.status)) throw new Error(detail);
+    console.log(`  ${detail.slice(0, 80)}… retrying in ${attempt} min`);
+    await new Promise((r) => setTimeout(r, attempt * 60_000));
+  }
 }
 
 function classify(tags: Record<string, string>): string | null {

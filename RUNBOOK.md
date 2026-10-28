@@ -111,8 +111,16 @@ import refreshes locations and websites; it never overwrites names or
 categories an admin or owner has corrected. Listings within 75 m of an
 existing one with a similar name are matched, not duplicated.
 
-Regions live in `lib/import/regions.ts` (bengaluru, hyderabad, pune, chennai,
-mumbai, delhi). Run imports on the server, not a laptop on a slow link.
+Regions live in `lib/import/regions.ts`: the metros plus about 70 tier 1 and
+tier 2 cities. `--region all` imports every one in turn (30 s apart, continuing
+past failures and listing them at the end); `--region pune,nagpur` picks a few.
+Run imports on the server, not a laptop on a slow link. A full OSM run takes a
+few hours, so start it in the background:
+
+```bash
+nohup npm run import:places -- --source osm --region all > ~/import-all.log 2>&1 &
+tail -f ~/import-all.log
+```
 
 **OpenStreetMap** (ODbL; the credit is shown on each listing):
 
