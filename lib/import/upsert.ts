@@ -14,7 +14,8 @@ import type { LocalityCandidate, PlaceCandidate } from "./types";
  *   similarity >= 0.6 (0.8 anywhere in the district, ignoring "Private
  *   Limited" and similar suffixes), or the same CIN.
  * - New listings are created as PENDING_VERIFICATION and stay out of search
- *   until a moderator publishes the batch at /admin/imports.
+ *   until a moderator publishes the batch at /admin/imports, or as APPROVED
+ *   straight away with the publish option.
  */
 
 export const DUPLICATE_RADIUS_M = 75;
@@ -24,6 +25,7 @@ const LOCALITY_RADIUS_M = 3000;
 
 export interface ImportOptions {
   dryRun?: boolean;
+  publish?: boolean; // create listings already published, skipping batch review
   log?: (msg: string) => void;
 }
 
@@ -148,7 +150,7 @@ export async function importPlaces(
       data: {
         name: place.name,
         categoryId: catId,
-        status: "PENDING_VERIFICATION",
+        status: opts.publish ? "APPROVED" : "PENDING_VERIFICATION",
         source: place.source,
         sourceRef: place.sourceRef,
         cin: place.cin ?? null,

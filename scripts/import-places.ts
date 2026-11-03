@@ -9,7 +9,8 @@
  *   npm run import:places -- --source osm --region pune,nagpur
  *
  * Add --dry-run to see the counts without writing anything. New listings
- * stay hidden until a moderator publishes the batch at /admin/imports.
+ * stay hidden until a moderator publishes the batch at /admin/imports, unless
+ * --publish is given, which makes them live straight away.
  * RUNBOOK.md section 6 explains each source.
  */
 import { readFileSync } from "node:fs";
@@ -33,10 +34,11 @@ async function main() {
   const regionArg = arg("region");
   const file = arg("file");
   const dryRun = process.argv.includes("--dry-run");
+  const publish = process.argv.includes("--publish");
   const limit = arg("limit") ? Number(arg("limit")) : undefined;
 
   if (!sourceArg || !SOURCES[sourceArg] || !regionArg) {
-    console.error(`Usage: --source osm|overture|mca --region all|<key>[,<key>…] [--file path] [--limit n] [--dry-run]\nRegions: ${REGIONS.map((r) => r.key).join(", ")}`);
+    console.error(`Usage: --source osm|overture|mca --region all|<key>[,<key>…] [--file path] [--limit n] [--dry-run] [--publish]\nRegions: ${REGIONS.map((r) => r.key).join(", ")}`);
     process.exit(1);
   }
   if (sourceArg !== "osm" && !file) {
@@ -58,7 +60,7 @@ async function main() {
       if (i > 0 && sourceArg === "osm" && !file) await new Promise((r) => setTimeout(r, 30_000));
       if (regions.length > 1) console.log(`\n[${i + 1}/${regions.length}] ${region.city}`);
       try {
-        await importRegion(prisma, region, SOURCES[sourceArg], sourceArg, { file, dryRun, limit });
+        await importRegion(prisma, region, SOURCES[sourceArg], sourceArg, { file, dryRun, limit, publish });
       } catch (err) {
         // One city failing (e.g. an Overpass timeout) shouldn't stop the rest.
         if (regions.length === 1) throw err;
@@ -80,7 +82,7 @@ async function importRegion(
   region: ImportRegion,
   source: DataSource,
   sourceArg: string,
-  { file, dryRun, limit }: { file?: string; dryRun: boolean; limit?: number }
+  { file, dryRun, limit, publish }: { file?: string; dryRun: boolean; limit?: number; publish: boolean }
 ) {
   const log = (m: string) => console.log(m);
 
@@ -118,7 +120,7 @@ async function importRegion(
       const n = await upsertLocalities(prisma, region, localities, { dryRun });
       log(`  ${n} neighbourhood centroids ${dryRun ? "to save" : "saved"}`);
     }
-    const counts = await importPlaces(prisma, job?.id ?? "", region, places, { dryRun, log });
+    const counts = await importPlaces(prisma, job?.id ?? "", region, places, { dryRun, publish, log });
     if (job) {
       await prisma.importJob.update({
         where: { id: job.id },
@@ -133,7 +135,9 @@ async function importRegion(
       });
     }
     log(`Done: ${counts.CREATED} new, ${counts.UPDATED} refreshed, ${counts.MERGED} matched existing listings, ${counts.SKIPPED} skipped.`);
-    if (job && counts.CREATED) log(`Review and publish the new listings at /admin/imports/${job.id}`);
+    if (job && counts.CREATED) {
+      log(publish ? "  New listings are live (--publish)." : `Review and publish the new listings at /admin/imports/${job.id}`);
+    }
   } catch (err) {
     if (job) {
       await prisma.importJob.update({
