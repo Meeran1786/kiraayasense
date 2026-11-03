@@ -106,7 +106,9 @@ land on the dashboard. From there:
 
 Business listings can be imported per city from three open sources. Every
 import creates listings as **pending**: nothing is public until a moderator
-spot-checks the batch at `/admin/imports` and clicks **Publish**. Re-running an
+spot-checks the batch at `/admin/imports` and clicks **Publish**. Add
+`--publish` to make an import's new listings live straight away instead.
+Businesses added by users on the site are always reviewed. Re-running an
 import refreshes locations and websites; it never overwrites names or
 categories an admin or owner has corrected. Listings within 75 m of an
 existing one with a similar name are matched, not duplicated.
