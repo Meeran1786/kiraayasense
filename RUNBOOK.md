@@ -136,28 +136,28 @@ saves neighbourhood centroids, which later imports use to assign localities.
 Run OSM first for a new city. Tag-to-category rules are in
 `lib/import/sources/osm.ts`.
 
-**Overture Maps places** (CDLA-Permissive-2.0). Overture publishes GeoParquet,
-so extract one city with [DuckDB](https://duckdb.org) first (check
-https://docs.overturemaps.org for the latest release and replace `<release>`):
-
-```sql
-INSTALL spatial; LOAD spatial; INSTALL httpfs; LOAD httpfs; SET s3_region='us-west-2';
-COPY (
-  SELECT id, names.primary AS name, categories.primary AS category, confidence,
-         ST_X(geometry) AS lon, ST_Y(geometry) AS lat,
-         addresses[1].freeform AS freeform, addresses[1].locality AS locality,
-         addresses[1].postcode AS postcode, websites[1] AS website
-  FROM read_parquet('s3://overturemaps-us-west-2/release/<release>/theme=places/type=place/*', hive_partitioning=1)
-  WHERE bbox.xmin BETWEEN 77.45 AND 77.78 AND bbox.ymin BETWEEN 12.83 AND 13.14
-) TO 'bengaluru-places.ndjson' (FORMAT JSON);
-```
+**Overture Maps places** (CDLA-Permissive-2.0). Far more small and medium
+businesses than OSM. Install the DuckDB CLI once (as root):
 
 ```bash
-npm run import:places -- --source overture --region bengaluru --file bengaluru-places.ndjson
+curl -fsSL -o /tmp/duckdb.zip https://github.com/duckdb/duckdb/releases/download/v1.1.3/duckdb_cli-linux-amd64.zip \
+  && unzip -o /tmp/duckdb.zip -d /usr/local/bin && chmod +x /usr/local/bin/duckdb
 ```
 
-The run prints the most common Overture categories it couldn't map; add them
-to `lib/import/sources/overture.ts` if they matter.
+Then, as `kiraaya` in `~/app`, download and import cities in one go. The
+script finds the latest Overture release, saves `~/overture/<region>.ndjson`
+and runs the importer on it (`metros` = Mumbai, Delhi NCR, Bengaluru,
+Hyderabad, Chennai, Kolkata, Pune, Ahmedabad):
+
+```bash
+nohup npm run overture -- --region metros --import --publish > ~/overture.log 2>&1 &
+npm run overture -- --region jaipur,lucknow --import          # leaves them for review
+```
+
+Places Overture marks as closed, and ones below 0.7 confidence, are skipped.
+Each run prints the most common Overture categories it couldn't map; add them
+to `lib/import/sources/overture.ts` if they matter. Run OSM first for a new
+city so localities exist.
 
 **MCA company master data** (GODL-India), for employers such as automotive
 OEMs, Tier-1 suppliers, aerospace and IT companies. Download the company

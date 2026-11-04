@@ -13,7 +13,8 @@
     "db:setup": "bash scripts/db-setup.sh",
     "db:seed": "tsx prisma/seed.ts",
     "make-admin": "tsx scripts/make-admin.ts",
-    "import:places": "tsx scripts/import-places.ts"
+    "import:places": "tsx scripts/import-places.ts",
+    "overture": "tsx scripts/overture-extract.ts"
   },
   "dependencies": {
     "next": "14.2.35",

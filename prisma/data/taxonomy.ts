@@ -41,7 +41,7 @@ export const CATEGORIES: SeedCategory[] = [
     slug: "automotive",
     name: "Automotive",
     relationships: ["EMPLOYEE", "CUSTOMER", "VENDOR_SUPPLIER", "JOB_APPLICANT"],
-    children: sub("automotive", ["OEM", "Tier-1 supplier", "Tier-2 supplier", "Dealership", "Service centre"]),
+    children: sub("automotive", ["OEM", "Tier-1 supplier", "Tier-2 supplier", "Dealership", "Service centre", "Fuel station", "Car wash"]),
   },
   {
     slug: "aerospace",
@@ -65,7 +65,7 @@ export const CATEGORIES: SeedCategory[] = [
     slug: "healthcare",
     name: "Healthcare",
     relationships: ["PATIENT_FAMILY", "EMPLOYEE", "JOB_APPLICANT"],
-    children: sub("healthcare", ["Hospital", "Clinic", "Diagnostic lab", "Pharmacy"]),
+    children: sub("healthcare", ["Hospital", "Clinic", "Diagnostic lab", "Pharmacy", "Veterinary clinic"]),
   },
   {
     slug: "banking-finance",
@@ -83,13 +83,36 @@ export const CATEGORIES: SeedCategory[] = [
     slug: "ecommerce-retail",
     name: "E-commerce & retail",
     relationships: ["CUSTOMER", "EMPLOYEE", "VENDOR_SUPPLIER"],
-    children: sub("ecommerce-retail", ["Marketplace", "Quick commerce", "Supermarket", "Electronics store"]),
+    children: sub("ecommerce-retail", [
+      "Marketplace",
+      "Quick commerce",
+      "Supermarket",
+      "Electronics store",
+      "Grocery / kirana",
+      "Clothing & footwear",
+      "Jewellery",
+      "Hardware & paints",
+      "Furniture & home decor",
+      "Optician",
+      "Books & stationery",
+    ]),
   },
   {
     slug: "food-hospitality",
     name: "Food & hospitality",
     relationships: ["CUSTOMER", "EMPLOYEE"],
-    children: sub("food-hospitality", ["Restaurant", "Cloud kitchen", "Caterer", "Food delivery app"]),
+    children: sub("food-hospitality", [
+      "Restaurant",
+      "Cloud kitchen",
+      "Caterer",
+      "Food delivery app",
+      "Cafe",
+      "Bakery",
+      "Sweet shop",
+      "Fast food",
+      "Bar & pub",
+      "Banquet hall",
+    ]),
   },
   {
     slug: "travel-transport",
@@ -101,13 +124,19 @@ export const CATEGORIES: SeedCategory[] = [
     slug: "home-services",
     name: "Home services",
     relationships: ["CUSTOMER", "EMPLOYEE"],
-    children: sub("home-services", ["Packers & movers", "Plumber / electrician", "Cleaning", "Pest control"]),
+    children: sub("home-services", ["Packers & movers", "Plumber / electrician", "Cleaning", "Pest control", "Laundry & dry cleaning", "Tailor"]),
   },
   {
     slug: "real-estate",
     name: "Real estate",
     relationships: ["CUSTOMER", "TENANT_GUEST", "EMPLOYEE"],
-    children: sub("real-estate", ["Builder / developer", "Broker", "Society management"]),
+    children: sub("real-estate", ["Builder / developer", "Broker", "Society management", "Coworking space"]),
+  },
+  {
+    slug: "personal-care",
+    name: "Personal care & fitness",
+    relationships: ["CUSTOMER", "EMPLOYEE", "JOB_APPLICANT"],
+    children: sub("personal-care", ["Salon & barber", "Beauty parlour & spa", "Gym & fitness", "Yoga & dance studio"]),
   },
   {
     slug: "government-utilities",
@@ -182,6 +211,28 @@ const housingStay = (extra: SeedQuestion[], facts: SeedQuestion[] = []): SeedQue
   HONEST("Deposit and charges transparency"),
   ...extra,
   ...facts,
+];
+
+
+const inStore = (extra: SeedQuestion[] = []): SeedQuestion[] => [
+  star("PRODUCT_QUALITY", "Product quality"),
+  star("STAFF_BEHAVIOUR", "Staff behaviour"),
+  ...extra,
+  VALUE("Prices and value"),
+  RESPONSIVE("Exchange and complaint handling"),
+  HONEST("Bill matched the price tags"),
+  WOULD_RECOMMEND,
+];
+
+const inStoreSlugs = [
+  "supermarket",
+  "electronics-store",
+  "grocery-kirana",
+  "clothing-footwear",
+  "jewellery",
+  "hardware-paints",
+  "furniture-home-decor",
+  "books-stationery",
 ];
 
 export const QUESTION_SETS: SeedQuestionSet[] = [
@@ -687,6 +738,163 @@ export const QUESTION_SETS: SeedQuestionSet[] = [
       VALUE("Value for the maintenance fee"),
       RESPONSIVE(),
       HONEST("Accounts shared openly"),
+    ],
+  },
+  // ── Everyday local businesses ──
+  ...inStoreSlugs.map(
+    (slug): SeedQuestionSet => ({
+      categorySlug: `ecommerce-retail-${slug}`,
+      relationship: "CUSTOMER",
+      title: "In-store shopper",
+      questions: inStore(slug === "jewellery" ? [star("PURITY_HONESTY", "Purity and weight as promised")] : []),
+    })
+  ),
+  {
+    categorySlug: "ecommerce-retail-optician",
+    relationship: "CUSTOMER",
+    title: "Optician customer",
+    questions: inStore([star("SERVICE_QUALITY", "Eye test and fitting")]),
+  },
+  {
+    categorySlug: "food-hospitality-cafe",
+    relationship: "CUSTOMER",
+    title: "Cafe visitor",
+    questions: [
+      star("FOOD_QUALITY", "Food and drinks"),
+      star("AMBIENCE", "Ambience and seating"),
+      star("HYGIENE_CLEANLINESS", "Hygiene"),
+      star("STAFF_BEHAVIOUR", "Service"),
+      VALUE(),
+      HONEST("Bill matched the menu"),
+      WOULD_RECOMMEND,
+    ],
+  },
+  ...["bakery", "sweet-shop"].map(
+    (slug): SeedQuestionSet => ({
+      categorySlug: `food-hospitality-${slug}`,
+      relationship: "CUSTOMER",
+      title: slug === "bakery" ? "Bakery customer" : "Sweet shop customer",
+      questions: [
+        star("FOOD_QUALITY", "Taste and freshness"),
+        star("HYGIENE_CLEANLINESS", "Hygiene"),
+        star("STAFF_BEHAVIOUR", "Staff behaviour"),
+        VALUE(),
+        HONEST("Weight and price as promised"),
+        WOULD_RECOMMEND,
+      ],
+    })
+  ),
+  {
+    categorySlug: "food-hospitality-banquet-hall",
+    relationship: "CUSTOMER",
+    title: "Event host",
+    questions: [
+      star("AMENITIES", "Hall, decor and facilities"),
+      star("FOOD_QUALITY", "Catering"),
+      star("STAFF_BEHAVIOUR", "Staff and coordination"),
+      VALUE(),
+      RESPONSIVE(),
+      HONEST("Final bill matched the quote"),
+      WOULD_RECOMMEND,
+    ],
+  },
+  {
+    categorySlug: "personal-care",
+    relationship: "CUSTOMER",
+    title: "Salon or spa customer",
+    questions: [
+      star("SERVICE_QUALITY", "Quality of the service"),
+      star("HYGIENE_CLEANLINESS", "Hygiene of tools and premises"),
+      star("STAFF_BEHAVIOUR", "Staff behaviour"),
+      star("TIMELINESS", "Waiting time / on time for appointment"),
+      VALUE(),
+      HONEST("Price matched what was quoted"),
+      WOULD_RECOMMEND,
+    ],
+  },
+  ...["gym-fitness", "yoga-dance-studio"].map(
+    (slug): SeedQuestionSet => ({
+      categorySlug: `personal-care-${slug}`,
+      relationship: "CUSTOMER",
+      title: slug === "gym-fitness" ? "Gym member" : "Studio member",
+      questions: [
+        star("TRAINER_QUALITY", "Trainers and instructors"),
+        star("AMENITIES", slug === "gym-fitness" ? "Equipment and maintenance" : "Space and facilities"),
+        star("HYGIENE_CLEANLINESS", "Cleanliness and changing rooms"),
+        star("CROWDING", "Not overcrowded at peak hours"),
+        VALUE("Value for the membership fee"),
+        HONEST("Clear about fees, freezes and refunds"),
+        WOULD_RECOMMEND,
+      ],
+    })
+  ),
+  { categorySlug: "personal-care", relationship: "EMPLOYEE", title: "Salon, spa or gym staff", questions: employeeCore() },
+  {
+    categorySlug: "automotive-fuel-station",
+    relationship: "CUSTOMER",
+    title: "Fuel station customer",
+    questions: [
+      star("QUANTITY_ACCURATE", "Correct quantity (meter reset, no short-filling)"),
+      star("STAFF_BEHAVIOUR", "Staff behaviour"),
+      star("AMENITIES", "Air, water and washrooms"),
+      HONEST("Billed correctly"),
+      WOULD_RECOMMEND,
+    ],
+  },
+  {
+    categorySlug: "automotive-car-wash",
+    relationship: "CUSTOMER",
+    title: "Car wash customer",
+    questions: [
+      star("SERVICE_QUALITY", "Quality of the wash"),
+      star("DAMAGE_FREE", "No scratches or damage"),
+      star("TIMELINESS", "Done in the promised time"),
+      VALUE(),
+      HONEST("Price matched what was quoted"),
+      WOULD_RECOMMEND,
+    ],
+  },
+  {
+    categorySlug: "healthcare-veterinary-clinic",
+    relationship: "PATIENT_FAMILY",
+    title: "Pet owner",
+    questions: [
+      star("TREATMENT_QUALITY", "Care and treatment"),
+      star("STAFF_BEHAVIOUR", "Doctor and staff behaviour"),
+      star("HYGIENE_CLEANLINESS", "Hygiene"),
+      star("WAIT_TIME", "Waiting time"),
+      VALUE(),
+      HONEST("Clear about fees and medicines"),
+      WOULD_RECOMMEND,
+    ],
+  },
+  ...["laundry-dry-cleaning", "tailor"].map(
+    (slug): SeedQuestionSet => ({
+      categorySlug: `home-services-${slug}`,
+      relationship: "CUSTOMER",
+      title: slug === "tailor" ? "Tailoring customer" : "Laundry customer",
+      questions: [
+        star("SERVICE_QUALITY", slug === "tailor" ? "Fit and stitching" : "Cleaning quality"),
+        star("DAMAGE_FREE", "Clothes returned without damage or loss"),
+        star("TIMELINESS", "Ready on the promised date"),
+        VALUE(),
+        HONEST("Price matched what was quoted"),
+        WOULD_RECOMMEND,
+      ],
+    })
+  ),
+  {
+    categorySlug: "real-estate-coworking-space",
+    relationship: "CUSTOMER",
+    title: "Coworking member",
+    questions: [
+      star("AMENITIES", "Desks, internet and facilities"),
+      star("HYGIENE_CLEANLINESS", "Cleanliness"),
+      star("COMMUNICATION", "Community and support team"),
+      VALUE(),
+      RESPONSIVE(),
+      HONEST("Clear about fees and lock-in"),
+      WOULD_RECOMMEND,
     ],
   },
   {
