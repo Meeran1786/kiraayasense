@@ -3,6 +3,8 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { SEARCH_LIMIT, SEARCH_SORTS, searchProperties, type SearchSort } from "@/lib/db/properties";
 import { locationOptions } from "@/lib/db/locations";
+import { HOW_RATINGS_WORK, topRated } from "@/lib/geo";
+import { SITE_URL } from "@/lib/site";
 import { getCategoryTree } from "@/lib/db/categories";
 import { PropertyCard } from "@/components/property/PropertyCard";
 import { FilterSidebar } from "@/components/search/FilterSidebar";
@@ -101,6 +103,32 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
     ? `Results for "${searchParams.q}"${place ? ` ${place}` : ""}`
     : `${category ? category.name : "All businesses"}${place ? ` ${place}` : ""}`;
 
+  // Answer-shaped Q&A for category and place pages (GEO): AI answer engines
+  // quote these, and FAQPage markup tells them what each answer is for.
+  const subject = `${category ? category.name.toLowerCase() : "businesses"} ${place}`.trim();
+  const best = topRated(results);
+  const faq =
+    !searchParams.q && (category || place) && results.length > 0
+      ? [
+          {
+            q: `Which ${subject} have the best reviews?`,
+            a: best.length
+              ? `On KiraayaSense the best rated are ${best
+                  .map((p) => `${p.name} (${p.overallRating.toFixed(1)}/5 from ${p.approvedReviewCount} review${p.approvedReviewCount === 1 ? "" : "s"})`)
+                  .join(", ")}.`
+              : `None of the ${subject} listed on KiraayaSense have reviews yet. Be the first to write one.`,
+          },
+          {
+            q: `How many ${subject} are listed on KiraayaSense?`,
+            a:
+              results.length >= SEARCH_LIMIT
+                ? `More than ${SEARCH_LIMIT}. Filter by locality to see them all.`
+                : `${results.length}, of which ${results.filter((p) => p.approvedReviewCount > 0).length} have reviews and ${results.filter((p) => p.verifiedProofCount > 0).length} have verified reviews.`,
+          },
+          { q: "How are KiraayaSense ratings calculated?", a: HOW_RATINGS_WORK },
+        ]
+      : [];
+
   return (
     <main style={{ background: brand.navy, minHeight: "100vh" }}>
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
@@ -139,6 +167,31 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                   <PropertyCard key={p.id} property={p} />
                 ))}
               </div>
+            )}
+            {faq.length > 0 && (
+              <section className="mt-10 rounded-xl border p-5" style={{ borderColor: "var(--ks-border)", background: "var(--ks-bg-elevated)" }}>
+                <h2 className="text-sm font-semibold text-[var(--ks-text)]">Quick answers</h2>
+                <dl className="mt-3 flex flex-col gap-4">
+                  {faq.map((f) => (
+                    <div key={f.q}>
+                      <dt className="text-sm font-medium text-[var(--ks-text)]">{f.q}</dt>
+                      <dd className="mt-1 text-sm text-[var(--ks-text-muted)]">{f.a}</dd>
+                    </div>
+                  ))}
+                </dl>
+                <script
+                  type="application/ld+json"
+                  // "<" is escaped so a business name can't close the script tag.
+                  dangerouslySetInnerHTML={{
+                    __html: JSON.stringify({
+                      "@context": "https://schema.org",
+                      "@type": "FAQPage",
+                      url: SITE_URL + "/search",
+                      mainEntity: faq.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
+                    }).replace(/</g, "\\u003c"),
+                  }}
+                />
+              </section>
             )}
             {results.length > 0 && (
               <p className="mt-6 text-center text-xs text-[var(--ks-text-faint)]">
