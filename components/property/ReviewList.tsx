@@ -88,11 +88,22 @@ export function ReviewList({ reviews, votedByViewer = [] }: { reviews: DbReview[
             </dl>
           )}
 
-          {review.mediaCount > 0 && (
-            <div className="mt-3 flex items-center gap-1.5 text-[11px] text-[var(--ks-text-faint)]">
-              <ImageIcon size={12} />
-              {review.mediaCount} photo{review.mediaCount === 1 ? "" : "s"}/video attached
+          {review.photoUrls.length > 0 ? (
+            <div className="mt-3 flex gap-2 overflow-x-auto">
+              {review.photoUrls.map((url) => (
+                <a key={url} href={url} target="_blank" rel="noopener" className="shrink-0">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- user uploads served by nginx */}
+                  <img src={url} alt="Photo from this review" loading="lazy" className="h-20 w-20 rounded-lg object-cover" />
+                </a>
+              ))}
             </div>
+          ) : (
+            review.mediaCount > 0 && (
+              <div className="mt-3 flex items-center gap-1.5 text-[11px] text-[var(--ks-text-faint)]">
+                <ImageIcon size={12} />
+                {review.mediaCount} photo{review.mediaCount === 1 ? "" : "s"}/video attached
+              </div>
+            )
           )}
 
           {review.ownerResponse && (

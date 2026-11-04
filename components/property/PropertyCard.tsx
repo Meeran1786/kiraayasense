@@ -11,7 +11,7 @@ export function PropertyCard({ property }: { property: DbProperty }) {
       className="group flex flex-col overflow-hidden rounded-xl border transition-colors hover:border-[var(--ks-border-strong)]"
       style={{ borderColor: "var(--ks-border)", background: "var(--ks-bg-elevated)" }}
     >
-      <PropertyThumb tone={property.heroTone} name={property.name} className="h-36 w-full" />
+      <PropertyThumb tone={property.heroTone} name={property.name} src={property.photos[0]} className="h-36 w-full" />
 
       <div className="flex flex-1 flex-col gap-2 p-4">
         <div className="flex items-start justify-between gap-2">

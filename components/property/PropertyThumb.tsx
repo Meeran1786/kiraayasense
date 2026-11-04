@@ -1,21 +1,29 @@
 import { Building2 } from "lucide-react";
 
 /**
- * Stand-in for a real property photo. No image pipeline exists in this
- * local harness (that's S3/R2 + moderation in production — FR-REV-4/5), so
- * listings use a deterministic tinted tile with the property's initial
- * instead of a broken <img> or a stock photo that would misrepresent a real
- * address.
+ * The listing's cover: its newest approved review photo when there is one,
+ * otherwise a deterministic tinted tile. Never a stock photo, which would
+ * misrepresent a real address.
  */
 export function PropertyThumb({
   tone,
   name,
   className,
+  src,
 }: {
   tone: string;
   name: string;
   className?: string;
+  src?: string;
 }) {
+  if (src) {
+    return (
+      <div className={`overflow-hidden ${className ?? ""}`} style={{ background: "var(--ks-bg-elevated-2)" }}>
+        {/* eslint-disable-next-line @next/next/no-img-element -- user uploads served by nginx */}
+        <img src={src} alt={`Photo of ${name}`} loading="lazy" className="h-full w-full object-cover" />
+      </div>
+    );
+  }
   return (
     <div
       className={`flex items-center justify-center overflow-hidden ${className ?? ""}`}

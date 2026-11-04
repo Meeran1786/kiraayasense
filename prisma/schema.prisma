@@ -454,6 +454,7 @@ model Property {
   @@index([status, categoryId])
   @@index([pincode])
   @@index([localityId])
+  @@index([status, state, district]) // search location filter counts
   @@map("properties")
 }
 
