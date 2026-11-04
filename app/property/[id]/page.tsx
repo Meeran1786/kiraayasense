@@ -90,7 +90,17 @@ export default async function PropertyDetailPage({ params }: { params: { id: str
         // "<" is escaped so a business name can't close the script tag.
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData(property)).replace(/</g, "\\u003c") }}
       />
-      <PropertyThumb tone={property.heroTone} name={property.name} className="h-56 w-full sm:h-72" />
+      <PropertyThumb tone={property.heroTone} name={property.name} src={property.photos[0]} className="h-56 w-full sm:h-72" />
+      {property.photos.length > 1 && (
+        <div className="mx-auto flex max-w-6xl gap-2 overflow-x-auto px-4 pt-3 sm:px-6">
+          {property.photos.slice(1).map((url) => (
+            <a key={url} href={url} target="_blank" rel="noopener" className="shrink-0">
+              {/* eslint-disable-next-line @next/next/no-img-element -- user uploads served by nginx */}
+              <img src={url} alt={`Photo of ${property.name}`} loading="lazy" className="h-20 w-28 rounded-lg object-cover" />
+            </a>
+          ))}
+        </div>
+      )}
 
       <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
         <div className="flex flex-col gap-6 lg:flex-row">

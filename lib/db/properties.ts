@@ -1,6 +1,7 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
 import { categoryIdsForSlug } from "@/lib/db/categories";
+import { nearbyPropertyIds } from "@/lib/db/locations";
 import type { RelationshipKey } from "@/lib/relationships";
 import type { Prisma } from "@prisma/client";
 
@@ -29,6 +30,8 @@ export interface DbReview {
   reasons: DbReviewReason[];
   facts: { label: string; value: string }[];
   mediaCount: number;
+  /** Approved photos attached to this review. */
+  photoUrls: string[];
   proofVerified: boolean;
   /** This review earned reward points; shown as a disclosure label. */
   rewarded: boolean;
@@ -69,6 +72,8 @@ export interface DbProperty {
   verifiedProofCount: number;
   metrics: DbMetric[];
   heroTone: string;
+  /** Approved review photos, newest first (at most 12). The first is the cover. */
+  photos: string[];
   reviews: DbReview[];
 }
 
@@ -118,6 +123,13 @@ function heroToneFor(name: string): string {
   for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
   const hue = hash % 360;
   return `oklch(60% 0.15 ${hue})`;
+}
+
+/** Public URL for an uploaded review photo (served by nginx from public/uploads). */
+function mediaUrl(storageKey: string): string | null {
+  if (/^https:\/\//.test(storageKey)) return storageKey;
+  if (/^reviews\/[\w.-]+$/.test(storageKey)) return `/uploads/${storageKey}`;
+  return null;
 }
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
@@ -180,6 +192,7 @@ function hydrateProperty(p: PropertyWithRelations): DbProperty {
       })),
       facts,
       mediaCount: review.media.length,
+      photoUrls: review.media.filter((m) => m.kind === "PHOTO" && m.status === "APPROVED").map((m) => mediaUrl(m.storageKey)).filter((u): u is string => !!u),
       proofVerified: review.proofs.some((proof) => proof.status === "APPROVED"),
       rewarded: review.pointEvents.length > 0,
       helpfulCount: review._count.helpfulVotes,
@@ -235,6 +248,7 @@ function hydrateProperty(p: PropertyWithRelations): DbProperty {
     verifiedProofCount: verifiedRaters,
     metrics,
     heroTone: heroToneFor(p.name),
+    photos: all.flatMap((r) => r.photoUrls).slice(0, 12),
     reviews,
   };
 }
@@ -266,8 +280,19 @@ export interface SearchFilters {
   q?: string;
   category?: string; // category or sub-category slug
   minRating?: number;
-  sort?: "rating_desc" | "review_count_desc" | "newest";
+  sort?: SearchSort;
+  state?: string;
+  city?: string; // the listing's district
+  locality?: string; // locality id
+  near?: { lat: number; lng: number; km: number };
+  /** Only listings with at least one review approved with proof. */
+  verifiedOnly?: boolean;
+  /** Only listings with at least one approved review. */
+  reviewedOnly?: boolean;
 }
+
+export type SearchSort = "rating_desc" | "review_count_desc" | "newest" | "nearest";
+export const SEARCH_SORTS: SearchSort[] = ["rating_desc", "review_count_desc", "newest", "nearest"];
 
 export async function searchProperties(filters: SearchFilters): Promise<DbProperty[]> {
   const where: Prisma.PropertyWhereInput = { status: "APPROVED" };
@@ -286,6 +311,22 @@ export async function searchProperties(filters: SearchFilters): Promise<DbProper
   if (filters.category) {
     where.categoryId = { in: await categoryIdsForSlug(filters.category) };
   }
+  if (filters.state) where.state = filters.state;
+  if (filters.city) where.district = filters.city;
+  if (filters.locality && /^[0-9a-f-]{36}$/i.test(filters.locality)) where.localityId = filters.locality;
+  if (filters.verifiedOnly) {
+    where.reviews = { some: { status: "APPROVED", proofs: { some: { status: "APPROVED" } } } };
+  } else if (filters.reviewedOnly) {
+    where.reviews = { some: { status: "APPROVED" } };
+  }
+
+  let nearOrder: Map<string, number> | null = null;
+  if (filters.near) {
+    const ids = await nearbyPropertyIds(filters.near.lat, filters.near.lng, filters.near.km);
+    if (ids.length === 0) return [];
+    nearOrder = new Map(ids.map((id, i) => [id, i]));
+    where.id = { in: ids };
+  }
 
   // Imported data puts tens of thousands of listings in a city, so only the
   // most-reviewed matches are loaded and ranked here.
@@ -293,7 +334,8 @@ export async function searchProperties(filters: SearchFilters): Promise<DbProper
     where,
     include: propertyInclude,
     orderBy: filters.sort === "newest" ? { createdAt: "desc" } : [{ reviews: { _count: "desc" } }, { name: "asc" }],
-    take: SEARCH_LIMIT,
+    // "Nearest" ranks in memory by distance, so load every nearby match.
+    take: nearOrder && filters.sort === "nearest" ? undefined : SEARCH_LIMIT,
   });
 
   let results = properties.map(hydrateProperty);
@@ -308,6 +350,12 @@ export async function searchProperties(filters: SearchFilters): Promise<DbProper
       break;
     case "newest":
       break; // already ordered by createdAt desc from the query
+    case "nearest":
+      if (nearOrder) {
+        results.sort((a, b) => nearOrder!.get(a.id)! - nearOrder!.get(b.id)!);
+        results = results.slice(0, SEARCH_LIMIT);
+      }
+      break;
     case "rating_desc":
     default:
       results.sort((a, b) => b.overallRating - a.overallRating);
