@@ -43,9 +43,42 @@ export interface ReviewerLevel {
 const LEVELS = [
   { name: "New reviewer", at: 0 },
   { name: "Reviewer", at: 1 },
-  { name: "Trusted reviewer", at: 5 },
-  { name: "Top reviewer", at: 15 },
+  { name: "Regular reviewer", at: 5 },
+  { name: "Trusted reviewer", at: 25 },
+  { name: "Top reviewer", at: 100 },
 ];
+
+export interface Badge {
+  key: string;
+  label: string;
+  /** Short line shown on hover / under the badge. */
+  hint: string;
+  kind: "milestone" | "city";
+}
+
+const MILESTONES = [
+  { at: 1, key: "first", label: "First verified review" },
+  { at: 5, key: "five", label: "5 verified reviews" },
+  { at: 25, key: "trusted", label: "Trusted reviewer" },
+  { at: 100, key: "top", label: "Top reviewer" },
+];
+
+/**
+ * Badges from verified reviews: milestones, plus one badge per city the
+ * reviewer has verified reviews in (e.g. "Hyderabad 3"), most reviewed first.
+ */
+export function reviewerBadges(verifiedReviews: number, verifiedByCity: Map<string, number>): Badge[] {
+  const badges: Badge[] = MILESTONES.filter((m) => verifiedReviews >= m.at).map((m) => ({
+    key: m.key,
+    label: m.label,
+    hint: `${m.at} verified review${m.at === 1 ? "" : "s"}`,
+    kind: "milestone",
+  }));
+  for (const [city, n] of Array.from(verifiedByCity.entries()).sort((a, b) => b[1] - a[1]).slice(0, 6)) {
+    badges.push({ key: `city:${city}`, label: `${city} ${n}`, hint: `${n} verified review${n === 1 ? "" : "s"} in ${city}`, kind: "city" });
+  }
+  return badges;
+}
 
 /** Level from the number of approved reviews. */
 export function reviewerLevel(approvedReviews: number): ReviewerLevel {

@@ -30,7 +30,14 @@ export interface DbReview {
   facts: { label: string; value: string }[];
   mediaCount: number;
   proofVerified: boolean;
+  /** This review earned reward points; shown as a disclosure label. */
+  rewarded: boolean;
+  helpfulCount: number;
+  overall: number | null;
+  postedOn: string;
   ownerResponse?: string;
+  /** The same reviewer's earlier visits to this business, newest first. */
+  earlierVisits: DbReview[];
 }
 
 export interface DbMetric {
@@ -78,6 +85,8 @@ const propertyInclude = {
       ownerResponse: true,
       user: true,
       questionSet: { include: { questions: true } },
+      pointEvents: { where: { kind: "VERIFIED_REVIEW" as const }, select: { id: true } },
+      _count: { select: { helpfulVotes: true } },
     },
     orderBy: { createdAt: "desc" as const },
   },
@@ -123,12 +132,21 @@ function formatFact(answer: PropertyWithRelations["reviews"][number]["answers"][
 function hydrateProperty(p: PropertyWithRelations): DbProperty {
   const totals = new Map<string, { label: string; order: number; sum: number; count: number }>();
 
-  const reviews: DbReview[] = p.reviews.map((review) => {
+  // Reviews come newest first. A reviewer's first one here is their latest
+  // visit: only that one counts toward the rating; older visits are shown
+  // under it as history.
+  const latestSeen = new Set<string>();
+  const all = p.reviews.map((review) => {
+    const isLatest = !latestSeen.has(review.userId);
+    latestSeen.add(review.userId);
+    const stars: number[] = [];
     const labels = new Map(review.questionSet.questions.map((q) => [q.key, q.label]));
     const facts: DbReview["facts"] = [];
 
     for (const answer of review.answers) {
       if (answer.starValue !== null) {
+        stars.push(answer.starValue);
+        if (!isLatest) continue;
         const entry = totals.get(answer.questionKey) ?? {
           label: answer.question.label,
           order: answer.question.sortOrder,
@@ -163,9 +181,30 @@ function hydrateProperty(p: PropertyWithRelations): DbProperty {
       facts,
       mediaCount: review.media.length,
       proofVerified: review.proofs.some((proof) => proof.status === "APPROVED"),
+      rewarded: review.pointEvents.length > 0,
+      helpfulCount: review._count.helpfulVotes,
+      overall: stars.length ? round1(stars.reduce((a, b) => a + b, 0) / stars.length) : null,
+      postedOn: review.createdAt.toLocaleDateString("en-IN", { month: "short", year: "numeric" }),
       ownerResponse: review.ownerResponse?.status === "APPROVED" ? review.ownerResponse.text : undefined,
+      earlierVisits: [],
+      groupKey: `${review.userId}:${review.isAnonymous}`,
     };
   });
+
+  // Group visits under the reviewer's newest review. Named and anonymous
+  // reviews are never grouped together, so anonymity holds.
+  const reviews: DbReview[] = [];
+  const heads = new Map<string, DbReview>();
+  for (const { groupKey, ...review } of all) {
+    const head = heads.get(groupKey);
+    if (head) head.earlierVisits.push(review);
+    else {
+      heads.set(groupKey, review);
+      reviews.push(review);
+    }
+  }
+  const raters = latestSeen.size;
+  const verifiedRaters = new Set(p.reviews.filter((r) => r.proofs.some((x) => x.status === "APPROVED")).map((r) => r.userId)).size;
 
   const metrics: DbMetric[] = Array.from(totals.entries())
     .map(([key, t]) => ({ key, label: t.label, order: t.order, average: round1(t.sum / t.count), count: t.count }))
@@ -192,8 +231,8 @@ function hydrateProperty(p: PropertyWithRelations): DbProperty {
     approxRentMin: p.approxRentMin,
     approxRentMax: p.approxRentMax,
     overallRating,
-    approvedReviewCount: reviews.length,
-    verifiedProofCount: reviews.filter((r) => r.proofVerified).length,
+    approvedReviewCount: raters,
+    verifiedProofCount: verifiedRaters,
     metrics,
     heroTone: heroToneFor(p.name),
     reviews,

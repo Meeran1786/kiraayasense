@@ -1,10 +1,12 @@
 import Link from "next/link";
-import { ImageIcon, ShieldCheck, ThumbsDown, ThumbsUp } from "lucide-react";
+import { Coins, History, ImageIcon, ShieldCheck, Star, ThumbsDown, ThumbsUp } from "lucide-react";
+import { HelpfulButton } from "@/components/property/HelpfulButton";
 import type { DbReview } from "@/lib/db/properties";
 import { RELATIONSHIP_BADGES } from "@/lib/relationships";
 import { brand } from "@/lib/brand";
 
-export function ReviewList({ reviews }: { reviews: DbReview[] }) {
+export function ReviewList({ reviews, votedByViewer = [] }: { reviews: DbReview[]; votedByViewer?: string[] }) {
+  const voted = new Set(votedByViewer);
   if (reviews.length === 0) {
     return (
       <div
@@ -43,7 +45,10 @@ export function ReviewList({ reviews }: { reviews: DbReview[] }) {
                 )}
                 {RELATIONSHIP_BADGES[review.relationship]}
               </p>
-              <p className="text-xs text-[var(--ks-text-faint)]">{review.postedAgo}</p>
+              <p className="text-xs text-[var(--ks-text-faint)]">
+                {review.earlierVisits.length > 0 ? "Latest visit · " : ""}
+                {review.postedAgo}
+              </p>
             </div>
             {review.proofVerified && (
               <span className="flex items-center gap-1 text-[11px] font-medium" style={{ color: "oklch(70% 0.15 150)" }}>
@@ -97,6 +102,39 @@ export function ReviewList({ reviews }: { reviews: DbReview[] }) {
             >
               <span className="font-semibold text-[var(--ks-text-muted)]">Response from management: </span>
               {review.ownerResponse}
+            </div>
+          )}
+
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+            <HelpfulButton reviewId={review.id} initialCount={review.helpfulCount} initialVoted={voted.has(review.id)} />
+            {review.rewarded && (
+              <span className="flex items-center gap-1 text-[11px] text-[var(--ks-text-faint)]" title="This reviewer earned KiraayaSense points for a verified review. Points never depend on the rating given.">
+                <Coins size={11} /> Earned points
+              </span>
+            )}
+          </div>
+
+          {review.earlierVisits.length > 0 && (
+            <div className="mt-3 border-t pt-3" style={{ borderColor: "var(--ks-border)" }}>
+              <p className="mb-2 flex items-center gap-1 text-[11px] font-medium text-[var(--ks-text-faint)]">
+                <History size={11} /> Earlier visit{review.earlierVisits.length === 1 ? "" : "s"}
+              </p>
+              <ul className="flex flex-col gap-2">
+                {review.earlierVisits.map((visit) => (
+                  <li key={visit.id} className="text-xs text-[var(--ks-text-muted)]">
+                    <span className="mr-2 inline-flex items-center gap-1 font-medium text-[var(--ks-text)]">
+                      {visit.overall !== null && (
+                        <>
+                          <Star size={11} className="fill-current" style={{ color: "var(--ks-warn)" }} />
+                          {visit.overall.toFixed(1)}
+                        </>
+                      )}
+                      <span className="font-normal text-[var(--ks-text-faint)]">· {visit.postedOn}</span>
+                    </span>
+                    {visit.reasons[0]?.text}
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
         </article>

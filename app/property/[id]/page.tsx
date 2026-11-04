@@ -13,6 +13,9 @@ import { Footer } from "@/components/layout/Footer";
 import { SourceCredit } from "@/components/property/SourceCredit";
 import { brand } from "@/lib/brand";
 import { SITE_URL } from "@/lib/site";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 
 // Metadata and the page both need the listing; load it once per request.
 const loadProperty = cache(getPropertyById);
@@ -69,6 +72,15 @@ function structuredData(p: NonNullable<Awaited<ReturnType<typeof getPropertyById
 export default async function PropertyDetailPage({ params }: { params: { id: string } }) {
   const property = await loadProperty(params.id);
   if (!property) notFound();
+  const session = await getServerSession(authOptions);
+  const votedByViewer = session?.user?.id
+    ? (
+        await prisma.helpfulVote.findMany({
+          where: { userId: session.user.id, reviewId: { in: property.reviews.map((r) => r.id) } },
+          select: { reviewId: true },
+        })
+      ).map((v) => v.reviewId)
+    : [];
   const relationships = await relationshipsForCategory(property.categoryId);
 
   return (
@@ -128,7 +140,7 @@ export default async function PropertyDetailPage({ params }: { params: { id: str
 
             <section>
               <h2 className="mb-3 text-sm font-semibold text-[var(--ks-text)]">Reviews</h2>
-              <ReviewList reviews={property.reviews} />
+              <ReviewList reviews={property.reviews} votedByViewer={votedByViewer} />
             </section>
           </div>
 
