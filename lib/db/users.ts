@@ -1,6 +1,7 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
-import { baseHandle, reviewerLevel, type ReviewerLevel } from "@/lib/handles";
+import { baseHandle, reviewerBadges, reviewerLevel, type Badge, type ReviewerLevel } from "@/lib/handles";
+import { reviewRewardInfo, totalPoints } from "@/lib/rewards";
 import type { RelationshipKey } from "@/lib/relationships";
 import type { ReviewStatus } from "@prisma/client";
 
@@ -29,6 +30,9 @@ export interface ProfileReview {
   firstReason: string | null;
   business: { id: string; name: string; locality: string; category: string };
   proofVerified: boolean;
+  /** Earned reward points (verified review). Shown as a disclosure label. */
+  rewarded: boolean;
+  helpfulCount: number;
 }
 
 export interface ReviewerProfile {
@@ -43,6 +47,8 @@ export interface ReviewerProfile {
   level: ReviewerLevel;
   approvedReviewCount: number;
   verifiedReviewCount: number;
+  points: number;
+  badges: Badge[];
   reviews: ProfileReview[];
 }
 
@@ -86,16 +92,29 @@ async function loadProfile(where: { id: string } | { handle: string }, ownView: 
         category: r.property.category.name,
       },
       proofVerified: r.proofs.some((p) => p.status === "APPROVED"),
+      rewarded: false,
+      helpfulCount: 0,
     };
   });
+  const info = await reviewRewardInfo(reviews.map((r) => r.id));
+  for (const r of reviews) {
+    r.rewarded = info.rewarded.has(r.id);
+    r.helpfulCount = info.helpful.get(r.id) ?? 0;
+  }
 
   // Level counts every approved review, anonymous ones included, so posting
   // anonymously never costs a reviewer standing.
-  const approved = ownView
-    ? reviews.filter((r) => r.status === "APPROVED")
-    : await prisma.review
-        .findMany({ where: { userId: user.id, status: "APPROVED" }, select: { proofs: { select: { status: true } } } })
-        .then((rows) => rows.map((r) => ({ proofVerified: r.proofs.some((p) => p.status === "APPROVED") })));
+  const approved = await prisma.review
+    .findMany({
+      where: { userId: user.id, status: "APPROVED" },
+      select: { proofs: { select: { status: true } }, property: { select: { district: true } } },
+    })
+    .then((rows) =>
+      rows.map((r) => ({ proofVerified: r.proofs.some((p) => p.status === "APPROVED"), city: r.property.district }))
+    );
+  const verified = approved.filter((r) => r.proofVerified);
+  const byCity = new Map<string, number>();
+  for (const r of verified) if (r.city) byCity.set(r.city, (byCity.get(r.city) ?? 0) + 1);
 
   return {
     id: user.id,
@@ -108,7 +127,9 @@ async function loadProfile(where: { id: string } | { handle: string }, ownView: 
     memberSince: user.createdAt,
     level: reviewerLevel(approved.length),
     approvedReviewCount: approved.length,
-    verifiedReviewCount: approved.filter((r) => r.proofVerified).length,
+    verifiedReviewCount: verified.length,
+    points: await totalPoints(user.id),
+    badges: reviewerBadges(verified.length, byCity),
     reviews,
   };
 }

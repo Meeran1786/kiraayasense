@@ -6,6 +6,8 @@ import { checkAgainstQuestionSet, reviewSubmissionSchema } from "@/lib/reviewVal
 import { relationshipsForCategory } from "@/lib/db/categories";
 import { resolveQuestionSet } from "@/lib/db/questionSets";
 
+const VISIT_COOLDOWN_DAYS = 30;
+
 /**
  * POST /api/reviews. Runs the same rules as the client form
  * (lib/reviewValidation.ts): the shape check, then every answer checked
@@ -75,11 +77,10 @@ export async function POST(req: NextRequest) {
   }
   const questionsById = new Map(questionSet.questions.map((q) => [q.id, q]));
 
-  // One review per user per business within a 180-day cooldown, unless the
-  // earlier one was rejected (FR-REV edge
-  // cases) — enforced here at the application layer since Postgres can't
-  // express a time-windowed uniqueness constraint declaratively.
-  const cooldownStart = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000);
+  // A reviewer can add a new visit to a business they already reviewed, but
+  // only 30 days after their last one (unless that was rejected). Each visit
+  // is its own review; the business rating uses only their latest.
+  const cooldownStart = new Date(Date.now() - VISIT_COOLDOWN_DAYS * 24 * 60 * 60 * 1000);
   const recentReview = await prisma.review.findFirst({
     where: {
       propertyId: input.propertyId,
@@ -87,13 +88,15 @@ export async function POST(req: NextRequest) {
       createdAt: { gte: cooldownStart },
       status: { not: "REJECTED" },
     },
+    orderBy: { createdAt: "desc" },
   });
   if (recentReview) {
+    const nextAllowed = new Date(recentReview.createdAt.getTime() + VISIT_COOLDOWN_DAYS * 24 * 60 * 60 * 1000);
     return NextResponse.json(
       {
         error: {
           code: "COOLDOWN",
-          message: "You've already reviewed this business in the last 180 days",
+          message: `You reviewed this business recently. You can add a new visit from ${nextAllowed.toLocaleDateString("en-IN", { day: "numeric", month: "long" })}.`,
         },
       },
       { status: 409 }

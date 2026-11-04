@@ -234,6 +234,8 @@ model User {
   exportJobs          ExportJob[]
   businessClaims      BusinessClaim[] @relation("Claimant")
   reviewedClaims      BusinessClaim[] @relation("ClaimReviewer")
+  pointEvents         PointEvent[]
+  helpfulVotes        HelpfulVote[]
 
   @@index([role, status])
   @@map("users")
@@ -488,10 +490,12 @@ model Review {
   proofs        VerificationProof[]
   flags         ReviewFlag[]
   ownerResponse OwnerResponse?
+  helpfulVotes  HelpfulVote[]
+  pointEvents   PointEvent[]
 
-  // One review per user per property within a cooldown window; enforced at
-  // the application layer (180-day rule, FR-REV edge cases) since Postgres
-  // can't express a time-windowed uniqueness constraint declaratively.
+  // A reviewer can add a new visit to the same business once every 30 days;
+  // enforced in POST /api/reviews. Only each reviewer's latest approved visit
+  // counts toward the business rating (lib/db/properties.ts).
   @@index([propertyId, status])
   @@index([userId])
   @@map("reviews")
@@ -752,4 +756,50 @@ model BusinessClaim {
   @@index([status, createdAt])
   @@index([propertyId])
   @@map("business_claims")
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Review rewards: points, helpful votes
+// ────────────────────────────────────────────────────────────────────────────
+
+enum PointKind {
+  VERIFIED_REVIEW // a review approved with at least one approved proof
+  PHOTO // bonus when that review also has an approved photo
+  HELPFUL_VOTE // someone marked the verified review helpful
+}
+
+/// "Helpful" taps on a review: one per signed-in user per review.
+model HelpfulVote {
+  reviewId  String   @db.Uuid
+  userId    String   @db.Uuid
+  createdAt DateTime @default(now())
+
+  review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([reviewId, userId])
+  @@index([userId])
+  @@map("helpful_votes")
+}
+
+/// Points ledger. Points only count while their review stays APPROVED, and
+/// become available 30 days after they are earned (lib/rewards.ts).
+model PointEvent {
+  id          String    @id @default(uuid()) @db.Uuid
+  userId      String    @db.Uuid
+  reviewId    String    @db.Uuid
+  kind        PointKind
+  points      Int
+  // e.g. "VERIFIED_REVIEW:<reviewId>" or "HELPFUL_VOTE:<reviewId>:<voterId>",
+  // so the same reward can never be given twice.
+  dedupeKey   String    @unique
+  availableAt DateTime
+  createdAt   DateTime  @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([reviewId, kind])
+  @@map("point_events")
 }

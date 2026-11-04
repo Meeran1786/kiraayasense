@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { awardApprovedReview } from "@/lib/rewards";
 
 const decisionSchema = z.discriminatedUnion("decision", [
   z.object({
@@ -52,6 +53,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
           data: { status: approved.has(proof.id) ? "APPROVED" : "REJECTED" },
         });
       }
+      // Verified reviews earn points; the star rating plays no part.
+      await awardApprovedReview(tx, review.id);
     } else {
       await tx.review.update({
         where: { id: review.id },

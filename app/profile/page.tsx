@@ -19,7 +19,7 @@ export default async function OwnProfilePage() {
       <div className="mx-auto flex max-w-3xl flex-col gap-8 px-4 py-8 sm:px-6">
         {profile ? (
           <>
-            <ProfileHeader profile={profile} />
+            <ProfileHeader profile={profile} ownView />
             <section>
               <h2 className="mb-3 text-sm font-semibold text-[var(--ks-text)]">Edit profile</h2>
               <ProfileEditor

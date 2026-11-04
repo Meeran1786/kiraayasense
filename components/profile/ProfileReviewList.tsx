@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { EyeOff, ShieldCheck, Star } from "lucide-react";
+import { Coins, EyeOff, ShieldCheck, Star, ThumbsUp } from "lucide-react";
 import type { ProfileReview } from "@/lib/db/users";
 import { RELATIONSHIP_BADGES } from "@/lib/relationships";
 
@@ -56,6 +56,16 @@ export function ProfileReviewList({ reviews, showStatus = false }: { reviews: Pr
             {r.proofVerified && (
               <span className="flex items-center gap-1" style={{ color: "oklch(70% 0.15 150)" }}>
                 <ShieldCheck size={11} /> Proof verified
+              </span>
+            )}
+            {r.helpfulCount > 0 && (
+              <span className="flex items-center gap-1">
+                <ThumbsUp size={11} /> {r.helpfulCount} found helpful
+              </span>
+            )}
+            {r.rewarded && (
+              <span className="flex items-center gap-1" title="Earned KiraayaSense points for a verified review">
+                <Coins size={11} /> Earned points
               </span>
             )}
           </div>
