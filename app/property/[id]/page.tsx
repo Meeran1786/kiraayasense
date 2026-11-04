@@ -13,6 +13,7 @@ import { Footer } from "@/components/layout/Footer";
 import { SourceCredit } from "@/components/property/SourceCredit";
 import { brand } from "@/lib/brand";
 import { SITE_URL } from "@/lib/site";
+import { propertySummary } from "@/lib/geo";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -46,6 +47,8 @@ function structuredData(p: NonNullable<Awaited<ReturnType<typeof getPropertyById
     "@id": `${SITE_URL}/property/${p.id}`,
     name: p.name,
     url: `${SITE_URL}/property/${p.id}`,
+    description: propertySummary(p),
+    ...(p.photos.length ? { image: p.photos.slice(0, 5).map((u) => (u.startsWith("/") ? `${SITE_URL}${u}` : u)) } : {}),
     ...(p.website ? { sameAs: [p.website] } : {}),
     address: {
       "@type": "PostalAddress",
@@ -64,6 +67,13 @@ function structuredData(p: NonNullable<Awaited<ReturnType<typeof getPropertyById
             bestRating: 5,
             worstRating: 1,
           },
+          review: p.reviews.slice(0, 5).map((r) => ({
+            "@type": "Review",
+            datePublished: r.postedAt,
+            author: { "@type": "Person", name: r.reviewer?.name ?? "KiraayaSense reviewer" },
+            ...(r.overall !== null ? { reviewRating: { "@type": "Rating", ratingValue: r.overall.toFixed(1), bestRating: 5, worstRating: 1 } } : {}),
+            reviewBody: r.reasons.map((x) => `${x.label}: ${x.text}`).join(" ").slice(0, 1000),
+          })),
         }
       : {}),
   };
@@ -136,6 +146,8 @@ export default async function PropertyDetailPage({ params }: { params: { id: str
               </div>
               <RatingBadge rating={property.overallRating} size="lg" />
             </div>
+
+            <p className="mt-4 max-w-3xl text-sm leading-relaxed text-[var(--ks-text-muted)]">{propertySummary(property)}</p>
 
             <hr className="my-6 border-0 border-t" style={{ borderColor: "var(--ks-border)" }} />
 

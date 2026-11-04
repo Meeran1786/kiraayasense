@@ -38,6 +38,7 @@ export interface DbReview {
   helpfulCount: number;
   overall: number | null;
   postedOn: string;
+  postedAt: string; // ISO date, for structured data
   ownerResponse?: string;
   /** The same reviewer's earlier visits to this business, newest first. */
   earlierVisits: DbReview[];
@@ -198,6 +199,7 @@ function hydrateProperty(p: PropertyWithRelations): DbProperty {
       helpfulCount: review._count.helpfulVotes,
       overall: stars.length ? round1(stars.reduce((a, b) => a + b, 0) / stars.length) : null,
       postedOn: review.createdAt.toLocaleDateString("en-IN", { month: "short", year: "numeric" }),
+      postedAt: review.createdAt.toISOString().slice(0, 10),
       ownerResponse: review.ownerResponse?.status === "APPROVED" ? review.ownerResponse.text : undefined,
       earlierVisits: [],
       groupKey: `${review.userId}:${review.isAnonymous}`,
