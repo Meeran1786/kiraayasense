@@ -17,6 +17,8 @@ import { propertySummary } from "@/lib/geo";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { managesProperty } from "@/lib/owner";
+import Link from "next/link";
 
 // Metadata and the page both need the listing; load it once per request.
 const loadProperty = cache(getPropertyById);
@@ -92,6 +94,7 @@ export default async function PropertyDetailPage({ params }: { params: { id: str
       ).map((v) => v.reviewId)
     : [];
   const relationships = await relationshipsForCategory(property.categoryId);
+  const viewerManages = session?.user?.id ? await managesProperty(session.user.id, property.id) : false;
 
   return (
     <main style={{ background: brand.navy, minHeight: "100vh" }}>
@@ -168,6 +171,16 @@ export default async function PropertyDetailPage({ params }: { params: { id: str
 
           <div className="w-full shrink-0 lg:w-80">
             <div className="lg:sticky lg:top-20">
+              {viewerManages && (
+                <Link
+                  href={`/owner/${property.id}`}
+                  className="mb-3 block rounded-xl border p-4 text-sm transition-opacity hover:opacity-90"
+                  style={{ borderColor: "var(--ks-coral)", background: "var(--ks-bg-elevated)" }}
+                >
+                  <span className="font-semibold text-[var(--ks-text)]">You manage this business</span>
+                  <span className="mt-0.5 block text-xs text-[var(--ks-text-muted)]">Reply to reviews and invite customers →</span>
+                </Link>
+              )}
               <WriteReviewGate
                 propertyId={property.id}
                 propertyName={property.name}

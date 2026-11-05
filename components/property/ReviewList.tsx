@@ -1,11 +1,21 @@
 import Link from "next/link";
 import { Coins, History, ImageIcon, ShieldCheck, Star, ThumbsDown, ThumbsUp } from "lucide-react";
 import { HelpfulButton } from "@/components/property/HelpfulButton";
+import { ReportButton } from "@/components/property/ReportButton";
 import type { DbReview } from "@/lib/db/properties";
 import { RELATIONSHIP_BADGES } from "@/lib/relationships";
 import { brand } from "@/lib/brand";
 
-export function ReviewList({ reviews, votedByViewer = [] }: { reviews: DbReview[]; votedByViewer?: string[] }) {
+export function ReviewList({
+  reviews,
+  votedByViewer = [],
+  renderOwnerTools,
+}: {
+  reviews: DbReview[];
+  votedByViewer?: string[];
+  /** The owner dashboard passes its reply box here; it replaces the public reply. */
+  renderOwnerTools?: (review: DbReview) => React.ReactNode;
+}) {
   const voted = new Set(votedByViewer);
   if (reviews.length === 0) {
     return (
@@ -106,23 +116,28 @@ export function ReviewList({ reviews, votedByViewer = [] }: { reviews: DbReview[
             )
           )}
 
-          {review.ownerResponse && (
+          {renderOwnerTools ? (
+            renderOwnerTools(review)
+          ) : review.ownerResponse && (
             <div
               className="mt-3 rounded-lg border-l-2 px-3 py-2 text-xs"
               style={{ borderColor: brand.coral, background: "var(--ks-bg-elevated-2)", color: "var(--ks-text-muted)" }}
             >
-              <span className="font-semibold text-[var(--ks-text-muted)]">Response from management: </span>
+              <span className="font-semibold text-[var(--ks-text-muted)]">Reply from the verified owner: </span>
               {review.ownerResponse}
             </div>
           )}
 
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
             <HelpfulButton reviewId={review.id} initialCount={review.helpfulCount} initialVoted={voted.has(review.id)} />
-            {review.rewarded && (
-              <span className="flex items-center gap-1 text-[11px] text-[var(--ks-text-faint)]" title="This reviewer earned KiraayaSense points for a verified review. Points never depend on the rating given.">
-                <Coins size={11} /> Earned points
-              </span>
-            )}
+            <div className="flex items-center gap-3">
+              {review.rewarded && (
+                <span className="flex items-center gap-1 text-[11px] text-[var(--ks-text-faint)]" title="This reviewer earned KiraayaSense points for a verified review. Points never depend on the rating given.">
+                  <Coins size={11} /> Earned points
+                </span>
+              )}
+              <ReportButton reviewId={review.id} />
+            </div>
           </div>
 
           {review.earlierVisits.length > 0 && (

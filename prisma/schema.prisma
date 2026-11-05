@@ -582,8 +582,10 @@ model ReviewFlag {
   id              String         @id @default(uuid()) @db.Uuid
   reviewId        String         @db.Uuid
   flaggedByUserId String         @db.Uuid
-  reason          String
+  reason          String // a FLAG_REASONS key (lib/flags.ts)
+  details         String? // what the reporter says is wrong, max 1000 chars
   resolution      FlagResolution @default(OPEN)
+  resolvedById    String?        @db.Uuid
   resolvedAt      DateTime?
   createdAt       DateTime       @default(now())
 
@@ -601,11 +603,17 @@ model OwnerResponse {
   respondedByUserId String              @db.Uuid
   text              String // max 1000 chars, enforced at API layer
   status            OwnerResponseStatus @default(PENDING_REVIEW)
+  // Shown to the owner when a moderator turns the reply down.
+  rejectionReason   String?
+  moderatedById     String?             @db.Uuid
+  moderatedAt       DateTime?
   createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @default(now()) @updatedAt
 
   review          Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
   respondedByUser User   @relation(fields: [respondedByUserId], references: [id])
 
+  @@index([status, updatedAt])
   @@map("owner_responses")
 }
 

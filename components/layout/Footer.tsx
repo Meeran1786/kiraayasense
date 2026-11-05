@@ -18,6 +18,10 @@ export function Footer() {
           ·{" "}
           <Link href="/terms" className="underline">
             Terms
+          </Link>{" "}
+          ·{" "}
+          <Link href="/owner" className="underline">
+            For business owners
           </Link>
         </p>
       </div>
