@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 import { SITE_URL } from "@/lib/site";
 
 // Signed-in and moderator pages have nothing for search engines.
-const PRIVATE = ["/admin", "/api/", "/profile", "/business/new", "/property/*/claim"];
+const PRIVATE = ["/admin", "/api/", "/profile", "/owner", "/embed/", "/badge/", "/business/new", "/property/*/claim"];
 
 // AI search and assistant crawlers, named so it is explicit that KiraayaSense
 // wants to be read and cited by them (GEO). A crawler that matches a named
