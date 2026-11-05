@@ -4,9 +4,11 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import { brand, brandGradient } from "@/lib/brand";
+import { useT } from "@/lib/i18n/client";
 
 export function SearchHero({ categories }: { categories: { slug: string; name: string }[] }) {
   const router = useRouter();
+  const t = useT();
   const [q, setQ] = useState("");
   const [category, setCategory] = useState("");
 
@@ -24,14 +26,13 @@ export function SearchHero({ categories }: { categories: { slug: string; name: s
       style={{ background: `radial-gradient(120% 100% at 50% -20%, oklch(30% 0.06 25 / 0.35), transparent), ${brand.navy}` }}
     >
       <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--ks-text-muted)" }}>
-        Real customers, tenants and employees. Proof-backed reviews.
+        {t("home.kicker")}
       </p>
       <h1 className="mx-auto mt-3 max-w-2xl text-3xl font-bold sm:text-4xl" style={{ color: brand.white }}>
-        Know the truth about a business before you pay or join
+        {t("home.title")}
       </h1>
       <p className="mx-auto mt-3 max-w-xl text-sm" style={{ color: "var(--ks-text-muted)" }}>
-        Homes and PGs, employers, hospitals, colleges, banks, service providers and more, rated on the
-        questions that matter for each, by people who dealt with them.
+        {t("home.subtitle")}
       </p>
 
       <form
@@ -44,7 +45,7 @@ export function SearchHero({ categories }: { categories: { slug: string; name: s
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Business name, category, locality, or PIN code"
+            placeholder={t("home.searchPlaceholder")}
             className="w-full bg-transparent text-sm text-[var(--ks-text)] placeholder:text-[var(--ks-text-faint)] focus:outline-none"
           />
         </div>
@@ -55,7 +56,7 @@ export function SearchHero({ categories }: { categories: { slug: string; name: s
           className="rounded-xl px-3 py-2.5 text-sm text-[var(--ks-text)]"
           style={{ background: "var(--ks-bg-input)" }}
         >
-          <option value="" className="bg-[var(--ks-bg-elevated)]">All categories</option>
+          <option value="" className="bg-[var(--ks-bg-elevated)]">{t("home.allCategories")}</option>
           {categories.map((c) => (
             <option key={c.slug} value={c.slug} className="bg-[var(--ks-bg-elevated)]">
               {c.name}
@@ -68,7 +69,7 @@ export function SearchHero({ categories }: { categories: { slug: string; name: s
           className="rounded-xl px-6 py-2.5 text-sm font-bold text-slate-950"
           style={{ background: brandGradient }}
         >
-          Search
+          {t("home.search")}
         </button>
       </form>
     </section>

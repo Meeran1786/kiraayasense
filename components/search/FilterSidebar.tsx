@@ -5,12 +5,15 @@ import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Loader2, LocateFixed, SlidersHorizontal, X } from "lucide-react";
 import type { CategoryNode } from "@/lib/db/categories";
 import type { LocationOptions } from "@/lib/db/locations";
+import { useT } from "@/lib/i18n/client";
+import { categoryName } from "@/lib/i18n/translate";
 
 const RADII = [2, 5, 10, 25];
 const FILTER_KEYS = ["category", "minRating", "state", "city", "locality", "lat", "lng", "km", "verified", "reviewed"];
 
 export function FilterSidebar({ categories, locations }: { categories: CategoryNode[]; locations: LocationOptions }) {
   const router = useRouter();
+  const t = useT();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [open, setOpen] = useState(false);
@@ -45,7 +48,7 @@ export function FilterSidebar({ categories, locations }: { categories: CategoryN
 
   const useMyLocation = () => {
     if (!("geolocation" in navigator)) {
-      setLocateError("Your browser can't share location.");
+      setLocateError(t("filter.noGeo"));
       return;
     }
     setLocating(true);
@@ -67,7 +70,7 @@ export function FilterSidebar({ categories, locations }: { categories: CategoryN
       },
       () => {
         setLocating(false);
-        setLocateError("Location permission was denied. Pick a city instead.");
+        setLocateError(t("filter.geoDenied"));
       },
       { timeout: 10000, maximumAge: 300000 }
     );
@@ -90,19 +93,19 @@ export function FilterSidebar({ categories, locations }: { categories: CategoryN
         aria-expanded={open}
       >
         <span className="flex items-center gap-2">
-          <SlidersHorizontal size={14} /> Filters{activeCount ? ` (${activeCount})` : ""}
+          <SlidersHorizontal size={14} /> {t("filter.filters")}{activeCount ? ` (${activeCount})` : ""}
         </span>
-        <span className="text-xs text-[var(--ks-text-faint)]">{open ? "Hide" : "Show"}</span>
+        <span className="text-xs text-[var(--ks-text-faint)]">{open ? t("filter.hide") : t("filter.show")}</span>
       </button>
 
       <div className={`${open ? "flex" : "hidden"} mt-4 flex-col gap-6 sm:mt-0 sm:flex`}>
         {activeCount > 0 && (
           <button type="button" onClick={clearAll} className="flex items-center gap-1 self-start text-xs font-medium text-[var(--ks-coral)] hover:underline">
-            <X size={12} /> Clear all filters
+            <X size={12} /> {t("filter.clear")}
           </button>
         )}
 
-        <Section title="Location">
+        <Section title={t("filter.location")}>
           <div className="flex flex-col gap-2">
             <button
               type="button"
@@ -116,12 +119,12 @@ export function FilterSidebar({ categories, locations }: { categories: CategoryN
               }
             >
               {locating ? <Loader2 size={14} className="animate-spin" /> : <LocateFixed size={14} />}
-              {near ? "Near me (on)" : "Near me"}
+              {near ? t("filter.nearMeOn") : t("filter.nearMe")}
             </button>
             {locateError && <p className="text-[11px] text-[var(--ks-danger)]">{locateError}</p>}
             {near && (
               <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-[11px] text-[var(--ks-text-faint)]">Within</span>
+                <span className="text-[11px] text-[var(--ks-text-faint)]">{t("filter.within")}</span>
                 {RADII.map((r) => (
                   <Chip key={r} label={`${r} km`} active={km === String(r)} onClick={() => update({ km: String(r) })} />
                 ))}
@@ -138,26 +141,26 @@ export function FilterSidebar({ categories, locations }: { categories: CategoryN
             {!near && (
               <>
                 <Select
-                  label="State"
+                  label={t("filter.state")}
                   value={state}
-                  placeholder="All states"
+                  placeholder={t("filter.allStates")}
                   options={locations.states}
                   onChange={(v) => update({ state: v, city: null, locality: null })}
                 />
                 {state && (
                   <Select
-                    label="City"
+                    label={t("filter.city")}
                     value={city}
-                    placeholder="All cities"
+                    placeholder={t("filter.allCities")}
                     options={locations.cities}
                     onChange={(v) => update({ city: v, locality: null })}
                   />
                 )}
                 {state && city && locations.localities.length > 0 && (
                   <Select
-                    label="Locality"
+                    label={t("filter.locality")}
                     value={locality}
-                    placeholder="All localities"
+                    placeholder={t("filter.allLocalities")}
                     options={locations.localities}
                     onChange={(v) => update({ locality: v })}
                   />
@@ -167,45 +170,45 @@ export function FilterSidebar({ categories, locations }: { categories: CategoryN
           </div>
         </Section>
 
-        <Section title="Sort by">
+        <Section title={t("filter.sortBy")}>
           <select
             value={sort}
             onChange={(e) => update({ sort: e.target.value })}
             className="w-full rounded-lg border bg-transparent px-2.5 py-2 text-sm text-[var(--ks-text)]"
             style={{ borderColor: "var(--ks-border-strong)" }}
           >
-            {near && <option value="nearest" className="bg-[var(--ks-bg-elevated)]">Nearest first</option>}
-            <option value="rating_desc" className="bg-[var(--ks-bg-elevated)]">Highest rated</option>
-            <option value="review_count_desc" className="bg-[var(--ks-bg-elevated)]">Most reviewed</option>
-            <option value="newest" className="bg-[var(--ks-bg-elevated)]">Newest</option>
+            {near && <option value="nearest" className="bg-[var(--ks-bg-elevated)]">{t("filter.nearest")}</option>}
+            <option value="rating_desc" className="bg-[var(--ks-bg-elevated)]">{t("filter.highestRated")}</option>
+            <option value="review_count_desc" className="bg-[var(--ks-bg-elevated)]">{t("filter.mostReviewed")}</option>
+            <option value="newest" className="bg-[var(--ks-bg-elevated)]">{t("filter.newest")}</option>
           </select>
         </Section>
 
-        <Section title="Reviews">
+        <Section title={t("filter.reviews")}>
           <div className="flex flex-col gap-2">
-            <Toggle label="Has reviews" checked={reviewed} onChange={(on) => update({ reviewed: on ? "1" : null })} />
-            <Toggle label="Verified reviews only" hint="Reviews backed by a bill or payment proof" checked={verified} onChange={(on) => update({ verified: on ? "1" : null })} />
+            <Toggle label={t("filter.hasReviews")} checked={reviewed} onChange={(on) => update({ reviewed: on ? "1" : null })} />
+            <Toggle label={t("filter.verifiedOnly")} hint={t("filter.verifiedHint")} checked={verified} onChange={(on) => update({ verified: on ? "1" : null })} />
           </div>
         </Section>
 
-        <Section title="Category">
+        <Section title={t("filter.category")}>
           <div className="flex flex-col gap-1.5">
-            <FilterOption label="All categories" active={!category} onClick={() => update({ category: null })} />
+            <FilterOption label={t("home.allCategories")} active={!category} onClick={() => update({ category: null })} />
             {categories.map((c) => (
               <div key={c.slug} className="flex flex-col gap-1">
-                <FilterOption label={c.name} active={category === c.slug} onClick={() => update({ category: c.slug })} />
+                <FilterOption label={categoryName(t, c.slug, c.name)} active={category === c.slug} onClick={() => update({ category: c.slug })} />
                 {openTop?.slug === c.slug &&
                   c.children.map((s) => (
-                    <FilterOption key={s.slug} label={s.name} indent active={category === s.slug} onClick={() => update({ category: s.slug })} />
+                    <FilterOption key={s.slug} label={categoryName(t, s.slug, s.name)} indent active={category === s.slug} onClick={() => update({ category: s.slug })} />
                   ))}
               </div>
             ))}
           </div>
         </Section>
 
-        <Section title="Minimum rating">
+        <Section title={t("filter.minRating")}>
           <div className="flex flex-wrap gap-1.5">
-            <Chip label="Any" active={!minRating} onClick={() => update({ minRating: null })} />
+            <Chip label={t("filter.any")} active={!minRating} onClick={() => update({ minRating: null })} />
             {[4, 3, 2].map((r) => (
               <Chip key={r} label={`${r}★ +`} active={minRating === String(r)} onClick={() => update({ minRating: String(r) })} />
             ))}
@@ -294,7 +297,7 @@ function FilterOption({ label, active, indent, onClick }: { label: string; activ
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-lg px-2.5 py-1.5 text-left text-sm transition-colors ${indent ? "ml-3 text-xs" : ""}`}
+      className={`rounded-lg px-2.5 py-1.5 text-start text-sm transition-colors ${indent ? "ms-3 text-xs" : ""}`}
       style={active ? { background: "oklch(28% 0.05 25 / 0.4)", color: "var(--ks-coral)" } : { color: "var(--ks-text-muted)" }}
     >
       {label}

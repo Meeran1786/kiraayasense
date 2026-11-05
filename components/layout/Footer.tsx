@@ -1,27 +1,24 @@
 import Link from "next/link";
+import { getT } from "@/lib/i18n/server";
 
 export function Footer() {
+  const t = getT();
   return (
     <footer className="border-t px-4 py-8 sm:px-6" style={{ borderColor: "var(--ks-border-soft)" }}>
       <div className="mx-auto max-w-6xl text-center text-[11px] leading-relaxed" style={{ color: "var(--ks-text-faint)" }}>
-        <p>
-          Reviews on KiraayaSense are user-generated content submitted by customers, tenants, employees and others,
-          and are not independently verified by KiraayaSense beyond the proof checks described in our moderation
-          policy. If you believe a review about your business is inaccurate or defamatory, contact our Grievance
-          Officer for a takedown review.
-        </p>
+        <p>{t("footer.disclaimer")}</p>
         <p className="mt-2">
           © 2026 KiraayaSense ·{" "}
           <Link href="/privacy" className="underline">
-            Privacy
+            {t("footer.privacy")}
           </Link>{" "}
           ·{" "}
           <Link href="/terms" className="underline">
-            Terms
+            {t("footer.terms")}
           </Link>{" "}
           ·{" "}
           <Link href="/owner" className="underline">
-            For business owners
+            {t("footer.owners")}
           </Link>
         </p>
       </div>

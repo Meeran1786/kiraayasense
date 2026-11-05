@@ -6,6 +6,11 @@ import { Header } from "@/components/layout/Header";
 import { ServiceWorker } from "@/components/layout/ServiceWorker";
 import { getCategoryTree } from "@/lib/db/categories";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
+import { I18nProvider } from "@/lib/i18n/client";
+import { getLocale } from "@/lib/i18n/server";
+import { localeInfo } from "@/lib/i18n/locales";
+import { messagesFor } from "@/lib/i18n/messages";
+import { categoryName, makeTranslator } from "@/lib/i18n/translate";
 
 // Every page reads live data (categories in the header, ratings), so none
 // may be prerendered at build time.
@@ -30,20 +35,32 @@ export const viewport: Viewport = { themeColor: "#141a2e" };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const categories = await getCategoryTree();
+  const locale = getLocale();
+  const messages = messagesFor(locale);
+  const t = makeTranslator(locale, messages);
 
   return (
-    <html lang="en">
+    <html lang={locale} dir={localeInfo(locale).dir}>
       <head>
         {/* Sets data-theme before hydration so the correct palette paints on
             the first frame — see lib/themeContext.tsx for what this runs. */}
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        {locale === "ur" && (
+          <>
+            <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+            {/* eslint-disable-next-line @next/next/no-page-custom-font -- only needed when the site is in Urdu */}
+            <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;600&display=swap" />
+          </>
+        )}
       </head>
       <body>
         <ThemeProvider>
-          <AuthProvider>
-            <Header navCategories={categories.map(({ slug, name }) => ({ slug, name }))} />
-            {children}
-          </AuthProvider>
+          <I18nProvider locale={locale} messages={messages}>
+            <AuthProvider>
+              <Header navCategories={categories.map(({ slug, name }) => ({ slug, name: categoryName(t, slug, name) }))} />
+              {children}
+            </AuthProvider>
+          </I18nProvider>
         </ThemeProvider>
         <ServiceWorker />
       </body>

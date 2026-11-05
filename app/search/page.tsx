@@ -10,6 +10,8 @@ import { PropertyCard } from "@/components/property/PropertyCard";
 import { FilterSidebar } from "@/components/search/FilterSidebar";
 import { Footer } from "@/components/layout/Footer";
 import { brand } from "@/lib/brand";
+import { getT } from "@/lib/i18n/server";
+import { categoryName } from "@/lib/i18n/translate";
 
 interface SearchPageProps {
   searchParams: {
@@ -99,9 +101,14 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   ]);
   const localityName = locations.localities.find((l) => l.value === searchParams.locality)?.label;
   const { category, place } = await describe(searchParams, localityName);
+  // The visible heading follows the visitor's language; metadata and the
+  // FAQ below stay English so search engines see one stable version.
+  const t = getT();
+  const area = [localityName, searchParams.city, searchParams.city ? undefined : searchParams.state].filter(Boolean).join(", ");
+  const shownPlace = near ? t("search.nearYou", { km: near.km }) : area ? t("search.inPlace", { place: area }) : "";
   const heading = searchParams.q
-    ? `Results for "${searchParams.q}"${place ? ` ${place}` : ""}`
-    : `${category ? category.name : "All businesses"}${place ? ` ${place}` : ""}`;
+    ? `${t("search.resultsFor", { q: searchParams.q })}${shownPlace ? ` ${shownPlace}` : ""}`
+    : `${category ? categoryName(t, category.slug, category.name) : t("search.all")}${shownPlace ? ` ${shownPlace}` : ""}`;
 
   // Answer-shaped Q&A for category and place pages (GEO): AI answer engines
   // quote these, and FAQPage markup tells them what each answer is for.
@@ -136,8 +143,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
           {heading}
         </h1>
         <p className="mt-1 text-sm" style={{ color: "var(--ks-text-muted)" }}>
-          {results.length >= SEARCH_LIMIT ? `Top ${SEARCH_LIMIT}` : results.length} business{results.length === 1 ? "" : "es"}
-          {results.length >= SEARCH_LIMIT ? " shown. Narrow down by locality or category to see more." : " found"}
+          {results.length >= SEARCH_LIMIT ? t("search.topShown", { n: SEARCH_LIMIT }) : t.n("search.found", results.length)}
         </p>
 
         <div className="mt-6 flex flex-col gap-6 sm:flex-row">
@@ -151,13 +157,13 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                 className="rounded-xl border p-8 text-center text-sm"
                 style={{ borderColor: "var(--ks-border)", color: "var(--ks-text-faint)" }}
               >
-                No businesses matched your search. Try a different name or locality, or clear a filter.
+                {t("search.none")}
                 <p className="mt-3">
                   <Link
                     href={`/business/new${searchParams.q ? `?name=${encodeURIComponent(searchParams.q)}` : ""}`}
                     className="font-semibold text-[var(--ks-text)] underline"
                   >
-                    Can&apos;t find it? Add the business
+                    {t("search.cantFind")}
                   </Link>
                 </p>
               </div>
@@ -195,9 +201,9 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
             )}
             {results.length > 0 && (
               <p className="mt-6 text-center text-xs text-[var(--ks-text-faint)]">
-                Not here?{" "}
+                {t("search.notHere")}{" "}
                 <Link href="/business/new" className="underline">
-                  Add a business
+                  {t("search.addBusiness")}
                 </Link>
               </p>
             )}
