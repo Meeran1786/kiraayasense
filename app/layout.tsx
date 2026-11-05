@@ -1,8 +1,9 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/lib/authContext";
 import { ThemeProvider, THEME_INIT_SCRIPT } from "@/lib/themeContext";
 import { Header } from "@/components/layout/Header";
+import { ServiceWorker } from "@/components/layout/ServiceWorker";
 import { getCategoryTree } from "@/lib/db/categories";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 
@@ -20,7 +21,12 @@ export const metadata: Metadata = {
   alternates: { canonical: "/" },
   openGraph: { type: "website", siteName: SITE_NAME, locale: "en_IN", description: DESCRIPTION },
   twitter: { card: "summary" },
+  applicationName: SITE_NAME,
+  appleWebApp: { capable: true, title: SITE_NAME, statusBarStyle: "black-translucent" },
+  icons: { icon: "/icons/icon.svg", apple: "/icons/apple-touch-icon.png" },
 };
+
+export const viewport: Viewport = { themeColor: "#141a2e" };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const categories = await getCategoryTree();
@@ -39,6 +45,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             {children}
           </AuthProvider>
         </ThemeProvider>
+        <ServiceWorker />
       </body>
     </html>
   );

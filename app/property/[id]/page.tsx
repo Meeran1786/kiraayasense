@@ -19,6 +19,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { managesProperty } from "@/lib/owner";
 import Link from "next/link";
+import { ShareButton } from "@/components/property/ShareButton";
 
 // Metadata and the page both need the listing; load it once per request.
 const loadProperty = cache(getPropertyById);
@@ -147,7 +148,10 @@ export default async function PropertyDetailPage({ params }: { params: { id: str
                   </p>
                 )}
               </div>
-              <RatingBadge rating={property.overallRating} size="lg" />
+              <div className="flex items-center gap-3">
+                <ShareButton name={property.name} url={`${SITE_URL}/property/${property.id}`} />
+                <RatingBadge rating={property.overallRating} size="lg" />
+              </div>
             </div>
 
             <p className="mt-4 max-w-3xl text-sm leading-relaxed text-[var(--ks-text-muted)]">{propertySummary(property)}</p>

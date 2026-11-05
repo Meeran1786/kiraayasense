@@ -9,6 +9,10 @@ import { ReviewList } from "@/components/property/ReviewList";
 import { CategoryBreakdown } from "@/components/property/CategoryBreakdown";
 import { RatingBadge } from "@/components/property/RatingBadge";
 import { ReplyBox } from "@/components/owner/ReplyBox";
+import { InviteTools } from "@/components/owner/InviteTools";
+import { EmbedTools } from "@/components/owner/EmbedTools";
+import { SITE_URL } from "@/lib/site";
+import { inviteMessage, inviteUrl, qrSvg } from "@/lib/invite";
 import { SignInPrompt } from "@/components/auth/SignInPrompt";
 import { Footer } from "@/components/layout/Footer";
 import { brand } from "@/lib/brand";
@@ -39,6 +43,8 @@ export default async function OwnerBusinessPage({ params }: { params: { id: stri
   const property = await getPropertyById(params.id);
   if (!property) notFound();
   const replies = await repliesForProperty(property.id);
+  const url = inviteUrl(property.id);
+  const qr = await qrSvg(url);
 
   const allReviews = property.reviews.length;
   const replied = property.reviews.filter((r) => replies.get(r.id)?.status === "APPROVED").length;
@@ -71,6 +77,22 @@ export default async function OwnerBusinessPage({ params }: { params: { id: stri
           <Stat value={allReviews ? `${Math.round((replied / allReviews) * 100)}%` : "—"} label="Reviews with your reply" />
           <Stat value={waiting} label="Waiting for a reply" />
         </div>
+
+        <section className="rounded-xl border p-5" style={{ borderColor: "var(--ks-border)", background: "var(--ks-bg-elevated)" }}>
+          <h2 className="text-sm font-semibold text-[var(--ks-text)]">Get more reviews</h2>
+          <p className="mb-4 mt-1 text-xs text-[var(--ks-text-muted)]">
+            Businesses that ask every customer get more, fairer reviews. The link opens your page with the review form ready.
+          </p>
+          <InviteTools propertyId={property.id} url={url} message={inviteMessage(property.name, url)} qrSvg={qr} />
+        </section>
+
+        <section className="rounded-xl border p-5" style={{ borderColor: "var(--ks-border)", background: "var(--ks-bg-elevated)" }}>
+          <h2 className="text-sm font-semibold text-[var(--ks-text)]">Show your rating on your website</h2>
+          <p className="mb-4 mt-1 text-xs text-[var(--ks-text-muted)]">
+            Free. Paste one of these into your website. Visitors trust ratings they can click through and check.
+          </p>
+          <EmbedTools siteUrl={SITE_URL} propertyId={property.id} name={property.name} />
+        </section>
 
         {property.metrics.length > 0 && (
           <section>
