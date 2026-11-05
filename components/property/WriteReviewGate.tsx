@@ -18,7 +18,7 @@ interface WriteReviewGateProps {
 }
 
 export function WriteReviewGate({ propertyId, propertyName, categoryId, relationships, isHousing }: WriteReviewGateProps) {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -42,15 +42,20 @@ export function WriteReviewGate({ propertyId, propertyName, categoryId, relation
   // memory afterwards. SignInModal passes `?startReview=1` as part of the
   // OAuth callbackUrl; once the page reloads signed-in, this effect notices
   // the flag, opens the review modal, and strips the flag from the URL.
+  // The same flag is how owners' invite links and QR posters work: a
+  // signed-out visitor arriving with it sees the sign-in step straight away.
   useEffect(() => {
-    if (user && searchParams.get("startReview") === "1") {
-      setReviewOpen(true);
-      const params = new URLSearchParams(searchParams.toString());
-      params.delete("startReview");
-      router.replace(params.toString() ? `${pathname}?${params.toString()}` : pathname);
+    if (loading || searchParams.get("startReview") !== "1") return;
+    if (!user) {
+      setSignInOpen(true);
+      return;
     }
+    setReviewOpen(true);
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("startReview");
+    router.replace(params.toString() ? `${pathname}?${params.toString()}` : pathname);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, [user, loading]);
 
   const googleCallbackUrl =
     typeof window !== "undefined"

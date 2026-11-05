@@ -23,7 +23,7 @@ export function Header({ navCategories }: { navCategories: { slug: string; name:
   return (
     <>
       <header
-        className="sticky top-0 z-40 border-b"
+        className="sticky top-0 z-40 border-b print:hidden"
         style={{ background: brand.navy, borderColor: "var(--ks-border-soft)" }}
       >
         <div className="mx-auto flex max-w-6xl items-center gap-6 px-4 py-3 sm:px-6">
