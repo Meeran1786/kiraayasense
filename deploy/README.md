@@ -50,6 +50,23 @@ up, migrates, builds and reloads. If the build fails the old version keeps
 serving. You can also run it by hand on the droplet as `kiraaya`, or from the
 Actions tab (Deploy → Run workflow).
 
+## Review translation (optional)
+
+The "Translate" button on reviews uses Microsoft Azure AI Translator when
+`AZURE_TRANSLATOR_KEY` is set in `/home/kiraaya/app/.env` (free F0 tier: 2
+million characters a month). Create a Translator resource in the Azure
+portal, pick the Free F0 tier and a region such as Central India, then copy
+Key 1 and the region:
+
+```bash
+AZURE_TRANSLATOR_KEY="..."
+AZURE_TRANSLATOR_REGION="centralindia"
+```
+
+Reload with `pm2 reload kiraayasense --update-env`. Each review is translated
+once per language and stored in `review_translations`, so repeat readers
+cost nothing. Without a key the button opens Google Translate in a new tab.
+
 ## Backups
 
 - `deploy/backup.sh` runs nightly at 03:30 IST: a `pg_dump` plus the uploaded

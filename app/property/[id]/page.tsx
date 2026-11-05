@@ -17,6 +17,10 @@ import { propertySummary } from "@/lib/geo";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { managesProperty } from "@/lib/owner";
+import Link from "next/link";
+import { ShareButton } from "@/components/property/ShareButton";
+import { getT } from "@/lib/i18n/server";
 
 // Metadata and the page both need the listing; load it once per request.
 const loadProperty = cache(getPropertyById);
@@ -92,6 +96,8 @@ export default async function PropertyDetailPage({ params }: { params: { id: str
       ).map((v) => v.reviewId)
     : [];
   const relationships = await relationshipsForCategory(property.categoryId);
+  const viewerManages = session?.user?.id ? await managesProperty(session.user.id, property.id) : false;
+  const t = getT();
 
   return (
     <main style={{ background: brand.navy, minHeight: "100vh" }}>
@@ -140,11 +146,14 @@ export default async function PropertyDetailPage({ params }: { params: { id: str
                   <p className="mt-1 flex items-center gap-1 text-sm" style={{ color: "var(--ks-text-faint)" }}>
                     <IndianRupee size={13} />
                     {property.approxRentMin.toLocaleString("en-IN")}–{property.approxRentMax.toLocaleString("en-IN")}
-                    <span className="text-xs text-[var(--ks-text-faint)]">/month, self-reported by reviewers</span>
+                    <span className="text-xs text-[var(--ks-text-faint)]">{t("prop.rentNote")}</span>
                   </p>
                 )}
               </div>
-              <RatingBadge rating={property.overallRating} size="lg" />
+              <div className="flex items-center gap-3">
+                <ShareButton name={property.name} url={`${SITE_URL}/property/${property.id}`} />
+                <RatingBadge rating={property.overallRating} size="lg" />
+              </div>
             </div>
 
             <p className="mt-4 max-w-3xl text-sm leading-relaxed text-[var(--ks-text-muted)]">{propertySummary(property)}</p>
@@ -153,7 +162,10 @@ export default async function PropertyDetailPage({ params }: { params: { id: str
 
             <section>
               <h2 className="mb-3 text-sm font-semibold text-[var(--ks-text)]">
-                Ratings <span className="font-normal text-[var(--ks-text-faint)]">({property.approvedReviewCount} review{property.approvedReviewCount === 1 ? "" : "s"}, {property.verifiedProofCount} with proof)</span>
+                {t("prop.ratings")}{" "}
+                <span className="font-normal text-[var(--ks-text-faint)]">
+                  ({t.n("count.review", property.approvedReviewCount)}, {t("prop.withProof", { n: property.verifiedProofCount })})
+                </span>
               </h2>
               <CategoryBreakdown metrics={property.metrics} />
             </section>
@@ -161,13 +173,23 @@ export default async function PropertyDetailPage({ params }: { params: { id: str
             <hr className="my-6 border-0 border-t" style={{ borderColor: "var(--ks-border)" }} />
 
             <section>
-              <h2 className="mb-3 text-sm font-semibold text-[var(--ks-text)]">Reviews</h2>
+              <h2 className="mb-3 text-sm font-semibold text-[var(--ks-text)]">{t("prop.reviews")}</h2>
               <ReviewList reviews={property.reviews} votedByViewer={votedByViewer} />
             </section>
           </div>
 
           <div className="w-full shrink-0 lg:w-80">
             <div className="lg:sticky lg:top-20">
+              {viewerManages && (
+                <Link
+                  href={`/owner/${property.id}`}
+                  className="mb-3 block rounded-xl border p-4 text-sm transition-opacity hover:opacity-90"
+                  style={{ borderColor: "var(--ks-coral)", background: "var(--ks-bg-elevated)" }}
+                >
+                  <span className="font-semibold text-[var(--ks-text)]">{t("prop.youManage")}</span>
+                  <span className="mt-0.5 block text-xs text-[var(--ks-text-muted)]">{t("prop.youManageHint")}</span>
+                </Link>
+              )}
               <WriteReviewGate
                 propertyId={property.id}
                 propertyName={property.name}
@@ -181,8 +203,7 @@ export default async function PropertyDetailPage({ params }: { params: { id: str
               </div>
 
               <p className="mt-3 text-[11px] leading-relaxed" style={{ color: "var(--ks-text-faint)" }}>
-                Approval by KiraayaSense confirms this is a real, non-duplicate listing — it is not an
-                endorsement of the business or its management. Reviews are user-generated content.
+                {t("prop.approvalNote")}
               </p>
             </div>
           </div>

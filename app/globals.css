@@ -64,3 +64,17 @@ body {
   color: var(--ks-text);
   transition: background-color 0.15s ease, color 0.15s ease;
 }
+
+/*
+ * Urdu: Nastaliq, the style Urdu readers expect, loaded from Google Fonts
+ * only when the site is in Urdu (app/layout.tsx). It needs extra line
+ * height or the descenders collide.
+ */
+html[lang="ur"] body,
+[lang="ur"] {
+  font-family: "Noto Nastaliq Urdu", "Jameel Noori Nastaleeq", "Noto Naskh Arabic", system-ui, sans-serif;
+}
+/* Beats Tailwind's text-* line heights (one class) so stacked lines don't overlap. */
+html[lang="ur"] body * {
+  line-height: 1.9;
+}

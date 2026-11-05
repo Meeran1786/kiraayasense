@@ -24,10 +24,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               Admin
             </span>
           </Link>
-          <nav className="flex items-center gap-4 text-xs font-medium" style={{ color: "var(--ks-text-muted)" }}>
+          <nav className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-medium" style={{ color: "var(--ks-text-muted)" }}>
             <Link href="/admin" className="hover:text-[var(--ks-text)]">Dashboard</Link>
             <Link href="/admin/banners" className="hover:text-[var(--ks-text)]">Banners</Link>
             <Link href="/admin/reviews" className="hover:text-[var(--ks-text)]">Reviews</Link>
+            <Link href="/admin/reports" className="hover:text-[var(--ks-text)]">Reports</Link>
+            <Link href="/admin/replies" className="hover:text-[var(--ks-text)]">Replies</Link>
             <Link href="/admin/properties" className="hover:text-[var(--ks-text)]">Businesses</Link>
             <Link href="/admin/claims" className="hover:text-[var(--ks-text)]">Claims</Link>
             <Link href="/admin/imports" className="hover:text-[var(--ks-text)]">Imports</Link>
@@ -35,7 +37,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             <Link href="/admin/question-sets" className="hover:text-[var(--ks-text)]">Questions</Link>
           </nav>
           <div className="ml-auto flex items-center gap-3 text-xs" style={{ color: "var(--ks-text-muted)" }}>
-            <Link href="/" className="hover:text-[var(--ks-text)]">← Back to site</Link>
+            <Link href="/" className="whitespace-nowrap hover:text-[var(--ks-text)]">← Back to site</Link>
             <span>{session?.user?.email}</span>
             <SignOutButton />
           </div>

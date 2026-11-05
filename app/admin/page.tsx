@@ -2,9 +2,11 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 
 export default async function AdminDashboardPage() {
-  const [propertyCount, pendingReviewCount, activeBannerCount, adminCount] = await Promise.all([
+  const [propertyCount, pendingReviewCount, reportedCount, pendingReplyCount, activeBannerCount, adminCount] = await Promise.all([
     prisma.property.count({ where: { status: "APPROVED" } }),
     prisma.review.count({ where: { status: "PENDING_REVIEW" } }),
+    prisma.review.count({ where: { OR: [{ status: "SUSPENDED" }, { status: "APPROVED", flags: { some: { resolution: "OPEN" } } }] } }),
+    prisma.ownerResponse.count({ where: { status: "PENDING_REVIEW" } }),
     prisma.adBanner.count({ where: { status: "ACTIVE" } }),
     prisma.user.count({ where: { role: { in: ["MODERATOR", "SUPER_ADMIN"] } } }),
   ]);
@@ -12,6 +14,8 @@ export default async function AdminDashboardPage() {
   const cards = [
     { label: "Live businesses", value: propertyCount, href: "/admin/properties" },
     { label: "Reviews awaiting moderation", value: pendingReviewCount, href: "/admin/reviews" },
+    { label: "Reported reviews", value: reportedCount, href: "/admin/reports" },
+    { label: "Owner replies to check", value: pendingReplyCount, href: "/admin/replies" },
     { label: "Active banners", value: activeBannerCount, href: "/admin/banners" },
     { label: "Admin/moderator accounts", value: adminCount, href: null },
   ];

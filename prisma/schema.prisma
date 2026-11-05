@@ -493,6 +493,7 @@ model Review {
   ownerResponse OwnerResponse?
   helpfulVotes  HelpfulVote[]
   pointEvents   PointEvent[]
+  translations  ReviewTranslation[]
 
   // A reviewer can add a new visit to the same business once every 30 days;
   // enforced in POST /api/reviews. Only each reviewer's latest approved visit
@@ -500,6 +501,24 @@ model Review {
   @@index([propertyId, status])
   @@index([userId])
   @@map("reviews")
+}
+
+// Machine translations of a review's written text, made on first request
+// and reused by every later reader (components/property/ReviewText.tsx).
+// `texts` maps review_reasons.id to its translation.
+model ReviewTranslation {
+  id         String   @id @default(uuid()) @db.Uuid
+  reviewId   String   @db.Uuid
+  targetLang String // ISO 639-1, e.g. "en"
+  sourceLang String? // as detected by the provider
+  texts      Json
+  provider   String // "azure" or "google"
+  createdAt  DateTime @default(now())
+
+  review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@unique([reviewId, targetLang])
+  @@map("review_translations")
 }
 
 // One row per answered question. Exactly one value column is set, matching
@@ -582,8 +601,10 @@ model ReviewFlag {
   id              String         @id @default(uuid()) @db.Uuid
   reviewId        String         @db.Uuid
   flaggedByUserId String         @db.Uuid
-  reason          String
+  reason          String // a FLAG_REASONS key (lib/flags.ts)
+  details         String? // what the reporter says is wrong, max 1000 chars
   resolution      FlagResolution @default(OPEN)
+  resolvedById    String?        @db.Uuid
   resolvedAt      DateTime?
   createdAt       DateTime       @default(now())
 
@@ -601,11 +622,17 @@ model OwnerResponse {
   respondedByUserId String              @db.Uuid
   text              String // max 1000 chars, enforced at API layer
   status            OwnerResponseStatus @default(PENDING_REVIEW)
+  // Shown to the owner when a moderator turns the reply down.
+  rejectionReason   String?
+  moderatedById     String?             @db.Uuid
+  moderatedAt       DateTime?
   createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @default(now()) @updatedAt
 
   review          Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
   respondedByUser User   @relation(fields: [respondedByUserId], references: [id])
 
+  @@index([status, updatedAt])
   @@map("owner_responses")
 }
 

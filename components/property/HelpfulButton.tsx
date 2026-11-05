@@ -4,10 +4,12 @@ import { useState } from "react";
 import { ThumbsUp } from "lucide-react";
 import { useAuth } from "@/lib/authContext";
 import { SignInModal } from "@/components/auth/SignInModal";
+import { useT } from "@/lib/i18n/client";
 
 /** "Helpful" tap on a review. One per signed-in user; not on your own review. */
 export function HelpfulButton({ reviewId, initialCount, initialVoted }: { reviewId: string; initialCount: number; initialVoted: boolean }) {
   const { user } = useAuth();
+  const t = useT();
   const [count, setCount] = useState(initialCount);
   const [voted, setVoted] = useState(initialVoted);
   const [busy, setBusy] = useState(false);
@@ -26,7 +28,7 @@ export function HelpfulButton({ reviewId, initialCount, initialVoted }: { review
       const res = await fetch(`/api/reviews/${reviewId}/helpful`, { method: next ? "POST" : "DELETE" });
       const body = await res.json().catch(() => null);
       if (!res.ok) {
-        setError(body?.error?.message ?? "Couldn't save that. Try again.");
+        setError(body?.error?.message ?? t("review.saveFailed"));
       } else {
         setVoted(body.helpful);
         setCount(body.count);
@@ -50,14 +52,14 @@ export function HelpfulButton({ reviewId, initialCount, initialVoted }: { review
         }}
       >
         <ThumbsUp size={12} className={voted ? "fill-current" : undefined} />
-        Helpful{count > 0 ? ` · ${count}` : ""}
+        {t("review.helpful")}{count > 0 ? ` · ${count}` : ""}
       </button>
       {error && <span className="text-[11px]" style={{ color: "var(--ks-danger)" }}>{error}</span>}
       <SignInModal
         isOpen={signInOpen}
         onClose={() => setSignInOpen(false)}
         onSignedIn={() => setSignInOpen(false)}
-        reason="Sign in to mark reviews as helpful."
+        reason={t("review.helpfulSignIn")}
       />
     </div>
   );

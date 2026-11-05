@@ -14,6 +14,7 @@ export type DataSourceKey = "USER" | "ADMIN" | "OSM" | "OVERTURE" | "MCA";
  */
 
 export interface DbReviewReason {
+  id: string;
   type: "PRO" | "CON";
   questionKey: string;
   label: string;
@@ -39,6 +40,7 @@ export interface DbReview {
   overall: number | null;
   postedOn: string;
   postedAt: string; // ISO date, for structured data
+  createdAt: string; // full ISO timestamp, for "3 days ago" in the reader's language
   ownerResponse?: string;
   /** The same reviewer's earlier visits to this business, newest first. */
   earlierVisits: DbReview[];
@@ -186,6 +188,7 @@ function hydrateProperty(p: PropertyWithRelations): DbProperty {
       relationship: review.relationship as RelationshipKey,
       postedAgo: timeAgo(review.createdAt),
       reasons: review.reasons.map((r) => ({
+        id: r.id,
         type: r.type as "PRO" | "CON",
         questionKey: r.questionKey,
         label: labels.get(r.questionKey) ?? r.questionKey,
@@ -200,6 +203,7 @@ function hydrateProperty(p: PropertyWithRelations): DbProperty {
       overall: stars.length ? round1(stars.reduce((a, b) => a + b, 0) / stars.length) : null,
       postedOn: review.createdAt.toLocaleDateString("en-IN", { month: "short", year: "numeric" }),
       postedAt: review.createdAt.toISOString().slice(0, 10),
+      createdAt: review.createdAt.toISOString(),
       ownerResponse: review.ownerResponse?.status === "APPROVED" ? review.ownerResponse.text : undefined,
       earlierVisits: [],
       groupKey: `${review.userId}:${review.isAnonymous}`,
