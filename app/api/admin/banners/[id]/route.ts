@@ -3,11 +3,12 @@ import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { dayEnd, dayStart } from "@/lib/banners";
 
 const patchSchema = z.object({
   title: z.string().min(1).optional(),
   imageStorageKey: z.string().min(1).optional(),
-  clickThroughUrl: z.string().url().optional(),
+  clickThroughUrl: z.string().url().regex(/^https?:\/\//, "Use an http(s) link").optional(),
   placement: z.enum(["HOME_HERO", "LOCALITY_PAGE", "SEARCH_INTERSTITIAL"]).optional(),
   status: z.enum(["DRAFT", "ACTIVE", "PAUSED", "COMPLETED"]).optional(),
   targetImpressions: z.number().int().positive().optional(),
@@ -15,6 +16,7 @@ const patchSchema = z.object({
   endAt: z.string().optional(),
   advertiserName: z.string().min(1).optional(),
   advertiserContact: z.string().optional(),
+  sortOrder: z.number().int().min(0).max(999).optional(),
 });
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
@@ -33,8 +35,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     where: { id: params.id },
     data: {
       ...rest,
-      ...(startAt ? { startAt: new Date(startAt) } : {}),
-      ...(endAt ? { endAt: new Date(endAt) } : {}),
+      ...(startAt ? { startAt: dayStart(startAt) } : {}),
+      ...(endAt ? { endAt: dayEnd(endAt) } : {}),
     },
   });
 
