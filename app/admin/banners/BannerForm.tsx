@@ -101,7 +101,7 @@ export function BannerForm({ initial }: { initial?: Partial<BannerFormValues> })
 
       <Field
         label="Banner image"
-        hint="Wide image, 1600 × 400 px (4:1), JPG, PNG or WebP under 3 MB. It shows at the same 4:1 shape on every screen, about 90 px tall on a phone, so use large text and few words. Or paste an https image URL."
+        hint="Wide 4:1 image, ideally 1600 × 400 px or larger (any size up to 25 MB, JPG, PNG or WebP). It is resized and compressed for you; a different shape is cropped from the centre to 4:1. It shows about 90 px tall on a phone, so use large text and few words. Or paste an https image URL."
       >
         <div className="flex flex-col gap-2">
           {previewUrl(values.imageStorageKey) && (
@@ -129,7 +129,7 @@ export function BannerForm({ initial }: { initial?: Partial<BannerFormValues> })
               Upload
               <input
                 type="file"
-                accept="image/jpeg,image/png,image/webp"
+                accept="image/*"
                 className="hidden"
                 onChange={(e) => handleUpload(e.target.files?.[0])}
               />
