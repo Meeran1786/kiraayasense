@@ -147,6 +147,21 @@ const bn: Partial<Messages> = {
   "cat.real-estate": "রিয়েল এস্টেট",
   "cat.personal-care": "ব্যক্তিগত যত্ন ও ফিটনেস",
   "cat.government-utilities": "সরকারি ও জনপরিষেবা",
+
+  "ask.button": "জিজ্ঞাসা",
+  "ask.title": "KiraayaSense-কে জিজ্ঞাসা করুন",
+  "ask.intro": "KiraayaSense-এর জায়গা ও রিভিউ নিয়ে জিজ্ঞাসা করুন। উত্তর আসল রিভিউ থেকে আসে, তবে ভুল হতে পারে, তাই টাকা দেওয়ার আগে যাচাই করুন।",
+  "ask.placeholder": "প্রশ্ন করুন…",
+  "ask.send": "পাঠান",
+  "ask.signIn": "জিজ্ঞাসা করতে সাইন ইন করুন",
+  "ask.thinking": "রিভিউ দেখা হচ্ছে…",
+  "ask.remaining": "আজ {n}টি প্রশ্ন বাকি",
+  "ask.close": "বন্ধ করুন",
+  "ask.clear": "নতুন চ্যাট",
+  "ask.example1": "হায়দরাবাদে সেরা রেটিংয়ের PG",
+  "ask.example2": "এই জায়গা নিয়ে রিভিউ কী বলছে?",
+  "ask.example3": "Verified ব্যাজ কীভাবে পাব?",
+  "ask.error": "কিছু ভুল হয়েছে। আবার চেষ্টা করুন।",
 };
 
 export default bn;

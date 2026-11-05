@@ -147,6 +147,21 @@ const gu: Partial<Messages> = {
   "cat.real-estate": "રિયલ એસ્ટેટ",
   "cat.personal-care": "વ્યક્તિગત સંભાળ અને ફિટનેસ",
   "cat.government-utilities": "સરકારી અને જાહેર સેવાઓ",
+
+  "ask.button": "પૂછો",
+  "ask.title": "KiraayaSense ને પૂછો",
+  "ask.intro": "KiraayaSense પરની જગ્યાઓ અને રિવ્યૂ વિશે પૂછો. જવાબો સાચા રિવ્યૂ પર આધારિત છે પણ ખોટા હોઈ શકે, તેથી પૈસા ચૂકવતા પહેલાં ખાતરી કરો.",
+  "ask.placeholder": "પ્રશ્ન પૂછો…",
+  "ask.send": "મોકલો",
+  "ask.signIn": "પૂછવા માટે સાઇન ઇન કરો",
+  "ask.thinking": "રિવ્યૂ જોઈ રહ્યા છીએ…",
+  "ask.remaining": "આજે {n} પ્રશ્નો બાકી",
+  "ask.close": "બંધ કરો",
+  "ask.clear": "નવી ચેટ",
+  "ask.example1": "હૈદરાબાદમાં શ્રેષ્ઠ રેટિંગવાળા PG",
+  "ask.example2": "આ જગ્યા વિશે રિવ્યૂ શું કહે છે?",
+  "ask.example3": "Verified બેજ કેવી રીતે મળે?",
+  "ask.error": "કંઈક ખોટું થયું. ફરી પ્રયાસ કરો.",
 };
 
 export default gu;
