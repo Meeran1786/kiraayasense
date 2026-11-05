@@ -9,6 +9,7 @@ out
 # real deployments swap this for S3/R2; never commit real uploads either way.
 /public/uploads/reviews/*
 !/public/uploads/reviews/.gitkeep
+/public/uploads/banners/
 /storage/private/proofs/*
 !/storage/private/proofs/.gitkeep
 

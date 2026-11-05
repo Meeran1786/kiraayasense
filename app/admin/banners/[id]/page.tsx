@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { istDate } from "@/lib/banners";
 import { BannerForm } from "../BannerForm";
 
 export default async function EditBannerPage({ params }: { params: { id: string } }) {
@@ -19,10 +20,11 @@ export default async function EditBannerPage({ params }: { params: { id: string 
             placement: banner.placement,
             status: banner.status,
             targetImpressions: banner.targetImpressions,
-            startAt: banner.startAt.toISOString(),
-            endAt: banner.endAt.toISOString(),
+            startAt: istDate(banner.startAt),
+            endAt: istDate(banner.endAt),
             advertiserName: banner.advertiserName,
             advertiserContact: banner.advertiserContact ?? "",
+            sortOrder: banner.sortOrder,
           }}
         />
       </div>

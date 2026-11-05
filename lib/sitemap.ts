@@ -53,6 +53,7 @@ export async function staticUrls(): Promise<SitemapUrl[]> {
     { path: "/" },
     { path: "/search" },
     ...categories.map((c) => ({ path: `/search?category=${encodeURIComponent(c.slug)}` })),
+    { path: "/for-businesses" },
     { path: "/privacy" },
     { path: "/terms" },
     ...profiles.map((p) => ({ path: `/u/${p.handle}`, lastModified: p.updatedAt })),

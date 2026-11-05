@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Search, UserCircle2, LogOut } from "lucide-react";
+import { Search, UserCircle2, LogOut, Store } from "lucide-react";
 import { useAuth } from "@/lib/authContext";
 import { SignInModal } from "@/components/auth/SignInModal";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
@@ -60,7 +60,7 @@ export function Header({ navCategories }: { navCategories: { slug: string; name:
           </form>
 
           <nav className="hidden items-center gap-4 lg:flex">
-            {navCategories.slice(0, 4).map((c) => (
+            {navCategories.slice(0, 3).map((c) => (
               <Link
                 key={c.slug}
                 href={`/search?category=${c.slug}`}
@@ -72,6 +72,16 @@ export function Header({ navCategories }: { navCategories: { slug: string; name:
           </nav>
 
           <div className="ms-auto flex shrink-0 items-center gap-2 sm:gap-3">
+            {/* Shown to everyone, signed in or not: the way in for owners to claim and manage a listing. */}
+            <Link
+              href="/for-businesses"
+              className="flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-1.5 text-xs font-semibold transition-colors hover:bg-white/5 sm:px-3"
+              style={{ borderColor: "var(--ks-coral)", color: "var(--ks-text)" }}
+            >
+              <Store size={14} style={{ color: "var(--ks-coral)" }} />
+              <span className="sm:hidden">{t("nav.forBusinessesShort")}</span>
+              <span className="hidden sm:inline">{t("nav.forBusinesses")}</span>
+            </Link>
             <div className="hidden sm:block">
               <LanguageSwitcher />
             </div>

@@ -6,7 +6,14 @@ import { Search } from "lucide-react";
 import { brand, brandGradient } from "@/lib/brand";
 import { useT } from "@/lib/i18n/client";
 
-export function SearchHero({ categories }: { categories: { slug: string; name: string }[] }) {
+export function SearchHero({
+  categories,
+  top,
+}: {
+  categories: { slug: string; name: string }[];
+  /** Shown above the headline, inside the hero background (the ad carousel). */
+  top?: React.ReactNode;
+}) {
   const router = useRouter();
   const t = useT();
   const [q, setQ] = useState("");
@@ -22,10 +29,11 @@ export function SearchHero({ categories }: { categories: { slug: string; name: s
 
   return (
     <section
-      className="relative overflow-hidden px-4 py-14 text-center sm:px-6"
+      className={`relative overflow-hidden px-4 pb-14 text-center sm:px-6 ${top ? "pt-4" : "pt-14"}`}
       style={{ background: `radial-gradient(120% 100% at 50% -20%, oklch(30% 0.06 25 / 0.35), transparent), ${brand.navy}` }}
     >
-      <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--ks-text-muted)" }}>
+      {top}
+      <p className={`text-xs font-semibold uppercase tracking-widest ${top ? "mt-8" : ""}`} style={{ color: "var(--ks-text-muted)" }}>
         {t("home.kicker")}
       </p>
       <h1 className="mx-auto mt-3 max-w-2xl text-3xl font-bold sm:text-4xl" style={{ color: brand.white }}>
