@@ -18,6 +18,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { getCategoryTree } from "@/lib/db/categories";
+import { getT } from "@/lib/i18n/server";
+import { categoryName } from "@/lib/i18n/translate";
 
 // Icons for the seeded top-level categories; categories admins add later
 // fall back to a generic storefront.
@@ -40,10 +42,11 @@ const ICONS: Record<string, LucideIcon> = {
 
 export async function CategoryChips() {
   const categories = await getCategoryTree();
+  const t = getT();
 
   return (
     <section className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-      <h2 className="mb-4 text-sm font-semibold text-[var(--ks-text)]">Browse by category</h2>
+      <h2 className="mb-4 text-sm font-semibold text-[var(--ks-text)]">{t("home.browse")}</h2>
       <div className="grid grid-cols-3 gap-3 sm:grid-cols-5 lg:grid-cols-7">
         {categories.map((c) => {
           const Icon = ICONS[c.slug] ?? Store;
@@ -55,7 +58,7 @@ export async function CategoryChips() {
               style={{ borderColor: "var(--ks-border)", background: "var(--ks-bg-elevated)" }}
             >
               <Icon size={20} className="text-[var(--ks-text-muted)]" />
-              <span className="text-[11px] font-medium leading-tight text-[var(--ks-text-muted)]">{c.name}</span>
+              <span className="text-[11px] font-medium leading-tight text-[var(--ks-text-muted)]">{categoryName(t, c.slug, c.name)}</span>
             </Link>
           );
         })}

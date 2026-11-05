@@ -3,8 +3,10 @@ import { MapPin, ShieldCheck } from "lucide-react";
 import { PropertyThumb } from "./PropertyThumb";
 import { RatingBadge } from "./RatingBadge";
 import type { DbProperty } from "@/lib/db/properties";
+import { getT } from "@/lib/i18n/server";
 
 export function PropertyCard({ property }: { property: DbProperty }) {
+  const t = getT();
   return (
     <Link
       href={`/property/${property.id}`}
@@ -30,12 +32,10 @@ export function PropertyCard({ property }: { property: DbProperty }) {
         </p>
 
         <div className="mt-auto flex items-center justify-between pt-2 text-xs" style={{ color: "var(--ks-text-faint)" }}>
-          <span>
-            {property.approvedReviewCount} review{property.approvedReviewCount === 1 ? "" : "s"}
-          </span>
+          <span>{t.n("count.review", property.approvedReviewCount)}</span>
           <span className="flex items-center gap-1" style={{ color: "oklch(70% 0.15 150)" }}>
             <ShieldCheck size={12} />
-            {property.verifiedProofCount} verified
+            {t("count.verified", { n: property.verifiedProofCount })}
           </span>
         </div>
       </div>

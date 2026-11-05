@@ -7,6 +7,8 @@ import { Search, UserCircle2, LogOut } from "lucide-react";
 import { useAuth } from "@/lib/authContext";
 import { SignInModal } from "@/components/auth/SignInModal";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
+import { LanguageSwitcher } from "@/components/layout/LanguageSwitcher";
+import { useT } from "@/lib/i18n/client";
 import { brand, brandGradient } from "@/lib/brand";
 
 export function Header({ navCategories }: { navCategories: { slug: string; name: string }[] }) {
@@ -14,6 +16,7 @@ export function Header({ navCategories }: { navCategories: { slug: string; name:
   const [signInOpen, setSignInOpen] = useState(false);
   const [q, setQ] = useState("");
   const router = useRouter();
+  const t = useT();
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,7 +53,7 @@ export function Header({ navCategories }: { navCategories: { slug: string; name:
               <input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                placeholder="Search businesses, categories, localities or PIN"
+                placeholder={t("nav.search")}
                 className="w-full bg-transparent text-sm text-[var(--ks-text)] placeholder:text-[var(--ks-text-faint)] focus:outline-none"
               />
             </div>
@@ -68,14 +71,17 @@ export function Header({ navCategories }: { navCategories: { slug: string; name:
             ))}
           </nav>
 
-          <div className="ml-auto flex shrink-0 items-center gap-3">
+          <div className="ms-auto flex shrink-0 items-center gap-2 sm:gap-3">
+            <div className="hidden sm:block">
+              <LanguageSwitcher />
+            </div>
             <ThemeToggle />
             {user ? (
               <div className="flex items-center gap-2">
                 <Link
                   href="/profile"
                   className="flex items-center gap-1 text-xs text-[var(--ks-text-muted)] hover:text-[var(--ks-text)]"
-                  aria-label="Your profile"
+                  aria-label={t("nav.profile")}
                 >
                   <UserCircle2 size={16} />
                   <span className="hidden sm:inline">{user.displayName}</span>
@@ -87,18 +93,18 @@ export function Header({ navCategories }: { navCategories: { slug: string; name:
                   style={{ borderColor: "var(--ks-border-strong)" }}
                 >
                   <LogOut size={13} />
-                  Sign out
+                  {t("nav.signOut")}
                 </button>
               </div>
             ) : (
               <button
                 type="button"
                 onClick={() => setSignInOpen(true)}
-                className="flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-bold text-slate-950"
+                className="flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-bold text-slate-950 sm:px-4"
                 style={{ background: brandGradient }}
               >
                 <UserCircle2 size={14} />
-                Sign in
+                {t("nav.signIn")}
               </button>
             )}
           </div>
@@ -111,9 +117,13 @@ export function Header({ navCategories }: { navCategories: { slug: string; name:
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Search businesses, locality, PIN"
+              placeholder={t("nav.searchShort")}
               className="w-full bg-transparent text-sm text-[var(--ks-text)] placeholder:text-[var(--ks-text-faint)] focus:outline-none"
             />
+          </div>
+          {/* On phones the language picker sits here; the top row has no room for it. */}
+          <div className="sm:hidden">
+            <LanguageSwitcher />
           </div>
         </form>
       </header>

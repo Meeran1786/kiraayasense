@@ -8,6 +8,7 @@ import { SignInModal } from "@/components/auth/SignInModal";
 import { ReviewSubmissionModal } from "@/components/review/ReviewSubmissionModal";
 import { brand, brandGradient } from "@/lib/brand";
 import type { RelationshipKey } from "@/lib/relationships";
+import { useT } from "@/lib/i18n/client";
 
 interface WriteReviewGateProps {
   propertyId: string;
@@ -19,6 +20,7 @@ interface WriteReviewGateProps {
 
 export function WriteReviewGate({ propertyId, propertyName, categoryId, relationships, isHousing }: WriteReviewGateProps) {
   const { user, loading } = useAuth();
+  const t = useT();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -71,21 +73,21 @@ export function WriteReviewGate({ propertyId, propertyName, categoryId, relation
         <div className="flex items-start gap-2 text-sm">
           <CheckCircle2 size={18} className="mt-0.5 shrink-0" style={{ color: brand.success }} />
           <div>
-            <p className="font-medium text-[var(--ks-text)]">Thanks — your review was submitted.</p>
+            <p className="font-medium text-[var(--ks-text)]">{t("gate.thanks")}</p>
             <p className="mt-0.5 text-xs text-[var(--ks-text-muted)]">
-              It'll appear here once our moderation team has checked it (usually within 48 hours).
+              {t("gate.thanksHint")}
             </p>
           </div>
         </div>
       ) : (
         <>
           <p className="text-sm font-semibold text-[var(--ks-text)]">
-            {isHousing ? "Stayed here?" : "Dealt with this business?"}
+            {isHousing ? t("gate.stayed") : t("gate.dealt")}
           </p>
           <p className="mt-1 text-xs text-[var(--ks-text-muted)]">
             {user
-              ? "Share your experience — you're signed in as " + user.displayName + "."
-              : "Sign in to write a review. Reviews with proof get a verified badge."}
+              ? t("gate.signedInAs", { name: user.displayName })
+              : t("gate.signInToWrite")}
           </p>
           <button
             type="button"
@@ -94,7 +96,7 @@ export function WriteReviewGate({ propertyId, propertyName, categoryId, relation
             style={{ background: brandGradient }}
           >
             <PenLine size={15} />
-            Write a review
+            {t("gate.write")}
           </button>
         </>
       )}
@@ -102,7 +104,7 @@ export function WriteReviewGate({ propertyId, propertyName, categoryId, relation
       <SignInModal
         isOpen={signInOpen}
         onClose={() => setSignInOpen(false)}
-        reason="Sign in to write a review — this keeps ratings honest and traceable to a real experience."
+        reason={t("gate.signInReason")}
         googleCallbackUrl={googleCallbackUrl}
         onSignedIn={() => {
           setSignInOpen(false);
