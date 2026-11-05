@@ -147,6 +147,21 @@ const ur: Partial<Messages> = {
   "cat.real-estate": "رئیل اسٹیٹ",
   "cat.personal-care": "ذاتی نگہداشت اور فٹنس",
   "cat.government-utilities": "سرکاری اور عوامی خدمات",
+
+  "ask.button": "پوچھیں",
+  "ask.title": "KiraayaSense سے پوچھیں",
+  "ask.intro": "KiraayaSense پر جگہوں اور ریویوز کے بارے میں پوچھیں۔ جواب اصلی ریویوز پر مبنی ہیں مگر غلط بھی ہو سکتے ہیں، اس لیے پیسے دینے سے پہلے تصدیق کر لیں۔",
+  "ask.placeholder": "سوال پوچھیں…",
+  "ask.send": "بھیجیں",
+  "ask.signIn": "پوچھنے کے لیے سائن اِن کریں",
+  "ask.thinking": "ریویوز دیکھے جا رہے ہیں…",
+  "ask.remaining": "آج {n} سوال باقی",
+  "ask.close": "بند کریں",
+  "ask.clear": "نئی چیٹ",
+  "ask.example1": "حیدرآباد میں سب سے اچھی ریٹنگ والے PG",
+  "ask.example2": "اس جگہ کے بارے میں ریویوز کیا کہتے ہیں؟",
+  "ask.example3": "Verified بیج کیسے ملتا ہے؟",
+  "ask.error": "کچھ غلط ہو گیا۔ دوبارہ کوشش کریں۔",
 };
 
 export default ur;

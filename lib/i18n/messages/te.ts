@@ -147,6 +147,21 @@ const te: Partial<Messages> = {
   "cat.real-estate": "రియల్ ఎస్టేట్",
   "cat.personal-care": "వ్యక్తిగత సంరక్షణ & ఫిట్‌నెస్",
   "cat.government-utilities": "ప్రభుత్వ & ప్రజా సేవలు",
+
+  "ask.button": "అడగండి",
+  "ask.title": "KiraayaSense ను అడగండి",
+  "ask.intro": "KiraayaSense లోని స్థలాలు, రివ్యూల గురించి అడగండి. సమాధానాలు నిజమైన రివ్యూల ఆధారంగా ఉంటాయి కానీ తప్పు కావచ్చు, కాబట్టి డబ్బు చెల్లించే ముందు సరిచూసుకోండి.",
+  "ask.placeholder": "ప్రశ్న అడగండి…",
+  "ask.send": "పంపండి",
+  "ask.signIn": "అడగడానికి సైన్ ఇన్ చేయండి",
+  "ask.thinking": "రివ్యూలు చూస్తున్నాం…",
+  "ask.remaining": "ఈ రోజు {n} ప్రశ్నలు మిగిలాయి",
+  "ask.close": "మూసివేయండి",
+  "ask.clear": "కొత్త చాట్",
+  "ask.example1": "హైదరాబాద్‌లో అత్యుత్తమ రేటింగ్ ఉన్న PGలు",
+  "ask.example2": "ఈ స్థలం గురించి రివ్యూలు ఏమంటున్నాయి?",
+  "ask.example3": "Verified బ్యాడ్జ్ ఎలా పొందాలి?",
+  "ask.error": "ఏదో పొరపాటు జరిగింది. మళ్ళీ ప్రయత్నించండి.",
 };
 
 export default te;

@@ -17,6 +17,7 @@
     "overture": "tsx scripts/overture-extract.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "1.5.0",
     "@prisma/client": "5.18.0",
     "lucide-react": "0.400.0",
     "next": "14.2.35",
@@ -25,7 +26,7 @@
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "server-only": "0.0.1",
-    "zod": "3.23.8"
+    "zod": "3.25.76"
   },
   "devDependencies": {
     "@types/node": "20.14.15",

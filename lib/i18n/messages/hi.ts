@@ -147,6 +147,21 @@ const hi: Partial<Messages> = {
   "cat.real-estate": "रियल एस्टेट",
   "cat.personal-care": "पर्सनल केयर और फ़िटनेस",
   "cat.government-utilities": "सरकारी और जनोपयोगी सेवाएँ",
+
+  "ask.button": "पूछें",
+  "ask.title": "KiraayaSense से पूछें",
+  "ask.intro": "KiraayaSense पर जगहों और रिव्यू के बारे में पूछें। जवाब असली रिव्यू पर आधारित हैं, पर ग़लत हो सकते हैं, इसलिए पैसे देने से पहले जाँच लें।",
+  "ask.placeholder": "सवाल पूछें…",
+  "ask.send": "भेजें",
+  "ask.signIn": "पूछने के लिए साइन इन करें",
+  "ask.thinking": "रिव्यू देखे जा रहे हैं…",
+  "ask.remaining": "आज {n} सवाल बाकी",
+  "ask.close": "बंद करें",
+  "ask.clear": "नई चैट",
+  "ask.example1": "हैदराबाद में सबसे अच्छी रेटिंग वाले PG",
+  "ask.example2": "इस जगह के बारे में रिव्यू क्या कहते हैं?",
+  "ask.example3": "Verified बैज कैसे मिलता है?",
+  "ask.error": "कुछ गड़बड़ हो गई। फिर से कोशिश करें।",
 };
 
 export default hi;

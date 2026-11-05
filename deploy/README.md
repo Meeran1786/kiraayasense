@@ -67,6 +67,32 @@ Reload with `pm2 reload kiraayasense --update-env`. Each review is translated
 once per language and stored in `review_translations`, so repeat readers
 cost nothing. Without a key the button opens Google Translate in a new tab.
 
+## Ask assistant (optional)
+
+The "Ask" button answers tenants' questions from the site's own listings and
+reviews, using Anthropic's Claude. It stays hidden until a key is set:
+
+1. Create an account at https://console.anthropic.com, add billing, and under
+   Settings → Limits set a monthly spend limit (for example $20) as a hard
+   backstop.
+2. Create an API key and add it to `/home/kiraaya/app/.env`:
+
+```bash
+ANTHROPIC_API_KEY="sk-ant-..."
+ASSISTANT_MODEL="claude-haiku-5-5"   # or claude-sonnet-5-5 / claude-opus-5-5
+ASSISTANT_DAILY_QUESTIONS=20         # per signed-in user per day
+ASSISTANT_DAILY_BUDGET_USD=5         # whole site per day; the assistant pauses when reached
+```
+
+3. Reload with `pm2 reload kiraayasense --update-env`.
+
+Only signed-in users can ask. Usage per user per day is in the
+`assistant_usage` table; today's estimated spend in dollars:
+
+```bash
+psql kiraayasense -c "select sum(questions) as questions, sum(\"costMicroUsd\")/1e6 as usd from assistant_usage where day = current_date"
+```
+
 ## Backups
 
 - `deploy/backup.sh` runs nightly at 03:30 IST: a `pg_dump` plus the uploaded

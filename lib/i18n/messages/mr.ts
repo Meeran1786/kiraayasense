@@ -147,6 +147,21 @@ const mr: Partial<Messages> = {
   "cat.real-estate": "रिअल इस्टेट",
   "cat.personal-care": "वैयक्तिक निगा आणि फिटनेस",
   "cat.government-utilities": "सरकारी आणि सार्वजनिक सेवा",
+
+  "ask.button": "विचारा",
+  "ask.title": "KiraayaSense ला विचारा",
+  "ask.intro": "KiraayaSense वरील ठिकाणे आणि रिव्ह्यूबद्दल विचारा. उत्तरे खऱ्या रिव्ह्यूवर आधारित आहेत पण चुकीची असू शकतात, म्हणून पैसे देण्यापूर्वी खात्री करा.",
+  "ask.placeholder": "प्रश्न विचारा…",
+  "ask.send": "पाठवा",
+  "ask.signIn": "विचारण्यासाठी साइन इन करा",
+  "ask.thinking": "रिव्ह्यू पाहत आहोत…",
+  "ask.remaining": "आज {n} प्रश्न बाकी",
+  "ask.close": "बंद करा",
+  "ask.clear": "नवीन चॅट",
+  "ask.example1": "हैदराबादमधील सर्वोत्तम रेटिंगचे PG",
+  "ask.example2": "या ठिकाणाबद्दल रिव्ह्यू काय म्हणतात?",
+  "ask.example3": "Verified बॅज कसा मिळतो?",
+  "ask.error": "काहीतरी चुकले. पुन्हा प्रयत्न करा.",
 };
 
 export default mr;

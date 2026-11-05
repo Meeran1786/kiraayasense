@@ -50,6 +50,11 @@ export default function PrivacyPage() {
       <ul>
         <li>Our hosting provider (DigitalOcean, servers in Bengaluru), which stores the data for us.</li>
         <li>Google, only to sign you in.</li>
+        <li>
+          Anthropic, only when you use the Ask assistant: your questions and the public listings and reviews needed to
+          answer them are sent to Anthropic&apos;s Claude service. We don&apos;t store the conversation, only how many
+          questions you asked each day.
+        </li>
         <li>Authorities, when Indian law requires it.</li>
       </ul>
 

@@ -4,6 +4,8 @@ import { AuthProvider } from "@/lib/authContext";
 import { ThemeProvider, THEME_INIT_SCRIPT } from "@/lib/themeContext";
 import { Header } from "@/components/layout/Header";
 import { ServiceWorker } from "@/components/layout/ServiceWorker";
+import { AskAssistant } from "@/components/assistant/AskAssistant";
+import { assistantEnabled } from "@/lib/assistant/config";
 import { getCategoryTree } from "@/lib/db/categories";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 import { I18nProvider } from "@/lib/i18n/client";
@@ -59,6 +61,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <AuthProvider>
               <Header navCategories={categories.map(({ slug, name }) => ({ slug, name: categoryName(t, slug, name) }))} />
               {children}
+              {assistantEnabled() && <AskAssistant />}
             </AuthProvider>
           </I18nProvider>
         </ThemeProvider>

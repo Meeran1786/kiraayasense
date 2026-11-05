@@ -154,6 +154,21 @@ const en = {
   "cat.real-estate": "Real estate",
   "cat.personal-care": "Personal care & fitness",
   "cat.government-utilities": "Government & utilities",
+
+  "ask.button": "Ask",
+  "ask.title": "Ask KiraayaSense",
+  "ask.intro": "Ask about places and reviews on KiraayaSense. Answers come from real reviews but can be wrong, so check before you pay.",
+  "ask.placeholder": "Ask a question…",
+  "ask.send": "Send",
+  "ask.signIn": "Sign in to ask",
+  "ask.thinking": "Looking through reviews…",
+  "ask.remaining": "{n} questions left today",
+  "ask.close": "Close",
+  "ask.clear": "New chat",
+  "ask.example1": "Best-rated PGs in Hyderabad",
+  "ask.example2": "What do reviewers say about this place?",
+  "ask.example3": "How do I get a Verified badge?",
+  "ask.error": "Something went wrong. Please try again.",
 };
 
 export type Messages = typeof en;
