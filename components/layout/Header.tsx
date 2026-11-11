@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Search, UserCircle2, LogOut, Store } from "lucide-react";
 import { useAuth } from "@/lib/authContext";
 import { SignInModal } from "@/components/auth/SignInModal";
@@ -16,6 +16,8 @@ export function Header({ navCategories }: { navCategories: { slug: string; name:
   const [signInOpen, setSignInOpen] = useState(false);
   const [q, setQ] = useState("");
   const router = useRouter();
+  // The home page has its own big search box, so the header one would repeat it.
+  const showSearch = usePathname() !== "/";
   const t = useT();
 
   const handleSearch = (e: React.FormEvent) => {
@@ -44,7 +46,7 @@ export function Header({ navCategories }: { navCategories: { slug: string; name:
             </span>
           </Link>
 
-          <form onSubmit={handleSearch} className="hidden flex-1 items-center gap-2 md:flex">
+          <form onSubmit={handleSearch} className={`hidden flex-1 items-center gap-2 ${showSearch ? "md:flex" : ""}`}>
             <div
               className="flex flex-1 items-center gap-2 rounded-full border px-3 py-1.5"
               style={{ borderColor: "var(--ks-border-strong)" }}
@@ -120,9 +122,16 @@ export function Header({ navCategories }: { navCategories: { slug: string; name:
           </div>
         </div>
 
-        {/* Mobile search row */}
-        <form onSubmit={handleSearch} className="flex items-center gap-2 border-t px-4 py-2 md:hidden" style={{ borderColor: "var(--ks-border-soft)" }}>
-          <div className="flex flex-1 items-center gap-2 rounded-full border px-3 py-1.5" style={{ borderColor: "var(--ks-border-strong)" }}>
+        {/* Mobile search row. On the home page only the phone language picker remains. */}
+        <form
+          onSubmit={handleSearch}
+          className={`flex items-center gap-2 border-t px-4 py-2 ${showSearch ? "md:hidden" : "justify-end sm:hidden"}`}
+          style={{ borderColor: "var(--ks-border-soft)" }}
+        >
+          <div
+            className={`flex-1 items-center gap-2 rounded-full border px-3 py-1.5 ${showSearch ? "flex" : "hidden"}`}
+            style={{ borderColor: "var(--ks-border-strong)" }}
+          >
             <Search size={15} className="text-[var(--ks-text-muted)]" />
             <input
               value={q}
