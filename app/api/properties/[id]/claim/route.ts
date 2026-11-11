@@ -4,6 +4,7 @@ import { Prisma } from "@prisma/client";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { claimSchema } from "@/lib/claims";
+import { onClaimSubmitted } from "@/lib/notify/events";
 
 /**
  * POST /api/properties/:id/claim — an owner or manager asks to manage a
@@ -51,6 +52,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     if (property.claimStatus === "UNCLAIMED") {
       await prisma.property.update({ where: { id: property.id }, data: { claimStatus: "PENDING_VERIFICATION" } });
     }
+    onClaimSubmitted(claim.id);
     return NextResponse.json({ claim }, { status: 201 });
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {

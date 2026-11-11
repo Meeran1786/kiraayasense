@@ -68,7 +68,7 @@ export async function awardApprovedReview(tx: Tx, reviewId: string, now = new Da
 }
 
 export type HelpfulResult =
-  | { ok: true; helpful: boolean; count: number }
+  | { ok: true; helpful: boolean; count: number; created: boolean }
   | { ok: false; status: number; code: string; message: string };
 
 /** Marks or unmarks a review as helpful for `voterId`. */
@@ -87,10 +87,12 @@ export async function setHelpful(reviewId: string, voterId: string, helpful: boo
 
     const key = { reviewId_userId: { reviewId, userId: voterId } };
     const dedupeKey = `HELPFUL_VOTE:${reviewId}:${voterId}`;
+    let created = false;
     if (helpful) {
       const existing = await tx.helpfulVote.findUnique({ where: key });
       if (!existing) {
         await tx.helpfulVote.create({ data: { reviewId, userId: voterId } });
+        created = true;
         // Only rewarded (verified) reviews earn helpful points, up to the cap.
         if (review.pointEvents.length > 0) {
           const earned = await tx.pointEvent.count({ where: { reviewId, kind: "HELPFUL_VOTE" } });
@@ -104,7 +106,7 @@ export async function setHelpful(reviewId: string, voterId: string, helpful: boo
       await tx.pointEvent.deleteMany({ where: { dedupeKey } });
     }
     const count = await tx.helpfulVote.count({ where: { reviewId } });
-    return { ok: true, helpful, count } as const;
+    return { ok: true, helpful, count, created } as const;
   });
 }
 

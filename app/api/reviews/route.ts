@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { checkAgainstQuestionSet, reviewSubmissionSchema } from "@/lib/reviewValidation";
 import { relationshipsForCategory } from "@/lib/db/categories";
 import { resolveQuestionSet } from "@/lib/db/questionSets";
+import { onReviewSubmitted } from "@/lib/notify/events";
 
 const VISIT_COOLDOWN_DAYS = 30;
 
@@ -164,5 +165,6 @@ export async function POST(req: NextRequest) {
     return created;
   });
 
+  onReviewSubmitted(review.id);
   return NextResponse.json({ id: review.id, status: review.status }, { status: 201 });
 }

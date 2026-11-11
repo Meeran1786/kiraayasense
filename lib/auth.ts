@@ -14,13 +14,11 @@ import { uniqueHandle } from "@/lib/db/users";
  * way around. Instead we keep NextAuth sessions as JWTs and use the
  * `signIn`/`jwt` callbacks below to upsert our own `User` row and stamp its
  * id + role onto the token, so the rest of the app (including the admin CMS
- * role check) reads from our schema exactly as it would with any other
- * auth method (e.g. the still-mocked phone/email OTP flow).
+ * role check) reads from our schema.
  *
- * Phone/email OTP (FR-AUTH-2) is intentionally NOT wired to a real SMS/email
- * gateway yet — that requires a provider account (MSG91/Twilio, SES/Postmark)
- * this environment doesn't have credentials for. It stays mocked in
- * lib/authContext.tsx until those credentials are supplied.
+ * Google is the only sign-in method, by decision (2026-11-11). Phone/email
+ * OTP login was removed; a WhatsApp number verified on the profile is used
+ * for alerts only, never to sign in.
  */
 
 export const authOptions: AuthOptions = {
@@ -62,6 +60,17 @@ export const authOptions: AuthOptions = {
         },
       });
 
+      // Admin access granted on the Team page before this person first
+      // signed in (app/admin/team). Applied once, then marked accepted.
+      const invite = await prisma.adminInvite.findUnique({ where: { email: user.email.toLowerCase() } });
+      if (invite && !invite.acceptedAt) {
+        const invited = await prisma.user.update({ where: { primaryEmail: user.email }, data: { role: invite.role } });
+        await prisma.adminInvite.update({ where: { id: invite.id }, data: { acceptedAt: new Date() } });
+        await prisma.auditLog.create({
+          data: { actorUserId: invite.invitedById, action: "ADMIN_INVITE_ACCEPTED", entityType: "User", entityId: invited.id, metadata: { role: invite.role } },
+        });
+      }
+
       await prisma.account
         .upsert({
           where: {
@@ -100,6 +109,10 @@ export const authOptions: AuthOptions = {
         token.status = dbUser.status;
         token.name = dbUser.displayName;
         token.picture = dbUser.avatarStorageKey ?? token.picture;
+        // "Last active" on the admin Team page; written at most once an hour.
+        if (!dbUser.lastSeenAt || Date.now() - dbUser.lastSeenAt.getTime() > 60 * 60 * 1000) {
+          await prisma.user.update({ where: { id: dbUser.id }, data: { lastSeenAt: new Date() } }).catch(() => undefined);
+        }
       }
       return token;
     },
@@ -116,6 +129,13 @@ export const authOptions: AuthOptions = {
 };
 
 export const ADMIN_ROLES = ["MODERATOR", "SUPER_ADMIN"] as const;
+
+/**
+ * Admin areas only a SUPER_ADMIN may open (pages and their /api/admin routes).
+ * Moderators keep reviews, reports, owner replies, claims and businesses.
+ * Enforced in middleware.ts; the sidebar only hides what this already blocks.
+ */
+export const SUPER_ADMIN_SECTIONS = ["team", "activity", "banners", "imports", "categories", "question-sets"] as const;
 
 export function isAdminSession(session: Session | null): boolean {
   return !!session?.user && (ADMIN_ROLES as readonly string[]).includes(session.user.role ?? "");

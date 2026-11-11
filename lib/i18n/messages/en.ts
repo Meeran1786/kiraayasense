@@ -204,6 +204,12 @@ const en = {
   "biz.step3": "Once a moderator confirms it, reply to reviews and invite customers from your dashboard.",
   "biz.trustTitle": "Fair to customers and owners",
   "biz.trustBody": "Owners can never edit, hide or delete reviews, and nobody can pay to remove or reorder them. That is why customers trust KiraayaSense, and why a good rating here means something.",
+
+  "nav.admin": "Admin",
+  "bell.label": "Notifications",
+  "bell.labelUnread": "Notifications, {n} new",
+  "bell.settings": "Alert settings",
+  "bell.empty": "No notifications yet.",
 };
 
 export type Messages = typeof en;

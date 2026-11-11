@@ -219,6 +219,11 @@ model User {
   passwordHash           String? // only set if the user opts into password auth
   role                   UserRole          @default(USER)
   status                 UserStatus        @default(ACTIVE)
+  // WhatsApp alerts need explicit opt-in on a verified primaryPhone.
+  whatsappOptInAt        DateTime?
+  // Per alert type: { "<type>": { "email": bool, "whatsapp": bool } }; missing = default (lib/notify/types.ts).
+  notificationPrefs      Json?
+  lastSeenAt             DateTime?
   createdAt              DateTime          @default(now())
   updatedAt              DateTime          @updatedAt
 
@@ -237,9 +242,78 @@ model User {
   pointEvents         PointEvent[]
   helpfulVotes        HelpfulVote[]
   assistantUsage      AssistantUsage[]
+  notifications       Notification[]
+  phoneVerifications  PhoneVerification[]
+  sentAdminInvites    AdminInvite[]    @relation("AdminInviter")
 
   @@index([role, status])
   @@map("users")
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Notifications (in-site bell, email, WhatsApp)
+// ────────────────────────────────────────────────────────────────────────────
+
+enum DeliveryStatus {
+  PENDING // waiting for the daily digest
+  SENT
+  SKIPPED // channel off, not opted in, or not configured
+  FAILED
+}
+
+// One row per person per event. The bell reads these; the email and WhatsApp
+// columns record what was sent (or why not) for each channel.
+model Notification {
+  id             String         @id @default(uuid()) @db.Uuid
+  userId         String         @db.Uuid
+  type           String // see lib/notify/types.ts
+  title          String
+  body           String
+  link           String?
+  urgent         Boolean        @default(false)
+  readAt         DateTime?
+  emailStatus    DeliveryStatus @default(SKIPPED)
+  whatsappStatus DeliveryStatus @default(SKIPPED)
+  createdAt      DateTime       @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([emailStatus])
+  @@index([whatsappStatus])
+  @@map("notifications")
+}
+
+// A 6-digit code sent on WhatsApp to prove a phone number. Only the hash is kept.
+model PhoneVerification {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  phone     String // E.164
+  codeHash  String
+  attempts  Int       @default(0)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("phone_verifications")
+}
+
+// Admin or moderator access granted to a Gmail address before that person has
+// signed in; applied on their first Google sign-in (lib/auth.ts).
+model AdminInvite {
+  id          String    @id @default(uuid()) @db.Uuid
+  email       String    @unique
+  role        UserRole
+  invitedById String    @db.Uuid
+  acceptedAt  DateTime?
+  createdAt   DateTime  @default(now())
+
+  invitedBy User @relation("AdminInviter", fields: [invitedById], references: [id])
+
+  @@map("admin_invites")
 }
 
 // OAuth-linked identities (Google, and future providers). One User can have

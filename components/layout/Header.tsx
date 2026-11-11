@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Search, UserCircle2, LogOut, Store } from "lucide-react";
+import { Search, UserCircle2, LogOut, Store, ShieldCheck } from "lucide-react";
+import { Bell } from "@/components/notifications/Bell";
 import { useAuth } from "@/lib/authContext";
 import { SignInModal } from "@/components/auth/SignInModal";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
@@ -16,14 +17,19 @@ export function Header({ navCategories }: { navCategories: { slug: string; name:
   const [signInOpen, setSignInOpen] = useState(false);
   const [q, setQ] = useState("");
   const router = useRouter();
+  const pathname = usePathname() ?? "";
   // The home page has its own big search box, so the header one would repeat it.
-  const showSearch = usePathname() !== "/";
+  const showSearch = pathname !== "/";
   const t = useT();
+  const isAdmin = user?.role === "SUPER_ADMIN" || user?.role === "MODERATOR";
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     router.push(q.trim() ? `/search?q=${encodeURIComponent(q.trim())}` : "/search");
   };
+
+  // The admin has its own header and sidebar (app/admin/layout.tsx).
+  if (pathname.startsWith("/admin")) return null;
 
   return (
     <>
@@ -90,6 +96,19 @@ export function Header({ navCategories }: { navCategories: { slug: string; name:
             <ThemeToggle />
             {user ? (
               <div className="flex items-center gap-2">
+                {isAdmin && (
+                  <Link
+                    href="/admin"
+                    className="flex items-center gap-1 rounded-full border px-2 py-1.5 text-xs font-semibold text-[var(--ks-text)] hover:bg-white/5 sm:px-2.5"
+                    style={{ borderColor: "var(--ks-border-strong)" }}
+                    aria-label={t("nav.admin")}
+                    title={t("nav.admin")}
+                  >
+                    <ShieldCheck size={14} />
+                    <span className="hidden lg:inline">{t("nav.admin")}</span>
+                  </Link>
+                )}
+                <Bell />
                 <Link
                   href="/profile"
                   className="flex items-center gap-1 text-xs text-[var(--ks-text-muted)] hover:text-[var(--ks-text)]"
@@ -101,11 +120,12 @@ export function Header({ navCategories }: { navCategories: { slug: string; name:
                 <button
                   type="button"
                   onClick={signOut}
-                  className="flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-semibold text-[var(--ks-text)] transition-colors hover:bg-white/5"
+                  aria-label={t("nav.signOut")}
+                  className="flex items-center gap-1 rounded-full border px-2 py-1.5 sm:px-3 text-xs font-semibold text-[var(--ks-text)] transition-colors hover:bg-white/5"
                   style={{ borderColor: "var(--ks-border-strong)" }}
                 >
                   <LogOut size={13} />
-                  {t("nav.signOut")}
+                  <span className="hidden sm:inline">{t("nav.signOut")}</span>
                 </button>
               </div>
             ) : (

@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { businessSubmissionSchema, coordsFromMapsUrl } from "@/lib/businessSubmission";
 import { findSimilarBusinesses } from "@/lib/db/similar";
+import { onBusinessAdded } from "@/lib/notify/events";
 
 const DAILY_LIMIT = 10;
 
@@ -85,5 +86,6 @@ export async function POST(req: NextRequest) {
       WHERE id = ${property.id}::uuid`;
   }
 
+  onBusinessAdded(property.id);
   return NextResponse.json({ property }, { status: 201 });
 }

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
-import { ADMIN_ROLES } from "@/lib/auth";
+import { ADMIN_ROLES, SUPER_ADMIN_SECTIONS } from "@/lib/auth";
 
 /**
  * Gates every /admin/* route (pages and the /api/admin/* mutation routes)
@@ -31,6 +31,15 @@ export async function middleware(req: NextRequest) {
     // Behind nginx, req.url carries the internal address (localhost:3000), so
     // build the redirect from the public site URL instead.
     return NextResponse.redirect(new URL("/admin/login", process.env.NEXTAUTH_URL || req.url));
+  }
+
+  // Some sections are for super admins only (lib/auth.ts SUPER_ADMIN_SECTIONS).
+  const section = pathname.replace(/^\/(api\/)?admin\/?/, "").split("/")[0];
+  if (role !== "SUPER_ADMIN" && (SUPER_ADMIN_SECTIONS as readonly string[]).includes(section)) {
+    if (pathname.startsWith("/api/admin")) {
+      return NextResponse.json({ error: { code: "FORBIDDEN", message: "Super admin access required" } }, { status: 403 });
+    }
+    return NextResponse.redirect(new URL("/admin?denied=1", process.env.NEXTAUTH_URL || req.url));
   }
 
   return NextResponse.next();
