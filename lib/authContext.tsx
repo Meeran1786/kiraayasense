@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useMemo, type ReactNode } from "react";
 import { SessionProvider, useSession, signIn, signOut as nextAuthSignOut } from "next-auth/react";
 
 /**
@@ -9,10 +9,8 @@ import { SessionProvider, useSession, signIn, signOut as nextAuthSignOut } from 
  * backed by our own `users` table in Postgres — so `user.id` here is a real
  * database id, and `user.role` is what the admin CMS gates on.
  *
- * Phone/email OTP (FR-AUTH-2) is still a local mock: there's no SMS/email
- * gateway account (MSG91/Twilio, SES/Postmark) wired up yet, so
- * `signInWithOtp` below sets in-memory-only state, same as before, clearly
- * marked in the UI (components/auth/SignInModal.tsx).
+ * Google is the only way to sign in. (A WhatsApp number can be verified on
+ * the profile for alerts, but it is not a login.)
  */
 
 export interface AppUser {
@@ -20,28 +18,20 @@ export interface AppUser {
   displayName: string;
   avatarUrl?: string | null;
   role: string;
-  authProvider: "GOOGLE" | "PHONE_OTP" | "EMAIL_OTP";
+  authProvider: "GOOGLE";
 }
 
 interface AuthContextValue {
   user: AppUser | null;
   loading: boolean;
   signInWithGoogle: (callbackUrl?: string) => void;
-  signInWithOtp: (destination: string, channel: "SMS" | "EMAIL") => void;
   signOut: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-interface MockOtpUser {
-  id: string;
-  displayName: string;
-  authProvider: "PHONE_OTP" | "EMAIL_OTP";
-}
-
 function AuthContextBridge({ children }: { children: ReactNode }) {
   const { data: session, status } = useSession();
-  const [otpUser, setOtpUser] = useState<MockOtpUser | null>(null);
 
   const signInWithGoogle = useCallback((callbackUrl?: string) => {
     // Real OAuth redirect — the browser leaves the page and comes back with
@@ -52,17 +42,7 @@ function AuthContextBridge({ children }: { children: ReactNode }) {
     signIn("google", callbackUrl ? { callbackUrl } : undefined);
   }, []);
 
-  const signInWithOtp = useCallback((destination: string, channel: "SMS" | "EMAIL") => {
-    // MOCK — no real OTP gateway configured. See module docblock above.
-    setOtpUser({
-      id: `mock-otp-user-${destination}`,
-      displayName: channel === "SMS" ? destination : destination.split("@")[0],
-      authProvider: channel === "SMS" ? "PHONE_OTP" : "EMAIL_OTP",
-    });
-  }, []);
-
   const signOut = useCallback(() => {
-    setOtpUser(null);
     if (session) nextAuthSignOut();
   }, [session]);
 
@@ -76,15 +56,12 @@ function AuthContextBridge({ children }: { children: ReactNode }) {
         authProvider: "GOOGLE",
       };
     }
-    if (otpUser) {
-      return { ...otpUser, role: "USER" };
-    }
     return null;
-  }, [session, otpUser]);
+  }, [session]);
 
   const value = useMemo(
-    () => ({ user, loading: status === "loading", signInWithGoogle, signInWithOtp, signOut }),
-    [user, status, signInWithGoogle, signInWithOtp, signOut]
+    () => ({ user, loading: status === "loading", signInWithGoogle, signOut }),
+    [user, status, signInWithGoogle, signOut]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

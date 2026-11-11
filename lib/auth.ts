@@ -14,13 +14,11 @@ import { uniqueHandle } from "@/lib/db/users";
  * way around. Instead we keep NextAuth sessions as JWTs and use the
  * `signIn`/`jwt` callbacks below to upsert our own `User` row and stamp its
  * id + role onto the token, so the rest of the app (including the admin CMS
- * role check) reads from our schema exactly as it would with any other
- * auth method (e.g. the still-mocked phone/email OTP flow).
+ * role check) reads from our schema.
  *
- * Phone/email OTP (FR-AUTH-2) is intentionally NOT wired to a real SMS/email
- * gateway yet — that requires a provider account (MSG91/Twilio, SES/Postmark)
- * this environment doesn't have credentials for. It stays mocked in
- * lib/authContext.tsx until those credentials are supplied.
+ * Google is the only sign-in method, by decision (2026-11-11). Phone/email
+ * OTP login was removed; a WhatsApp number verified on the profile is used
+ * for alerts only, never to sign in.
  */
 
 export const authOptions: AuthOptions = {
