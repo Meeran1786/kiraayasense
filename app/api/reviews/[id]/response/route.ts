@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { managesProperty, replySchema } from "@/lib/owner";
+import { onOwnerReplySubmitted } from "@/lib/notify/events";
 
 const error = (status: number, code: string, message: string) =>
   NextResponse.json({ error: { code, message } }, { status });
@@ -45,6 +46,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     create: { reviewId: auth.review.id, ...data },
     select: { status: true, text: true },
   });
+  onOwnerReplySubmitted(auth.review.id, auth.userId);
   return NextResponse.json(reply);
 }
 

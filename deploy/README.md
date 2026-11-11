@@ -93,6 +93,55 @@ Only signed-in users can ask. Usage per user per day is in the
 psql kiraayasense -c "select sum(questions) as questions, sum(\"costMicroUsd\")/1e6 as usd from assistant_usage where day = current_date"
 ```
 
+## Alerts: email and WhatsApp (optional)
+
+Every alert appears on the bell at the top of the site. Email and WhatsApp
+copies are sent once these are set up. Each person chooses which alerts they
+get under **Profile → Alerts**.
+
+**Email (Resend)**
+
+1. Create an account at https://resend.com and add the domain
+   `kiraayasense.com`.
+2. Add the DNS records it shows (one MX, two TXT for SPF and DKIM) in GoDaddy
+   → My Products → kiraayasense.com → DNS. Wait until Resend shows Verified.
+3. Create an API key and add it to `/home/kiraaya/app/.env`:
+
+```bash
+RESEND_API_KEY="re_..."
+ALERTS_FROM_EMAIL="KiraayaSense <alerts@kiraayasense.com>"
+```
+
+**WhatsApp (Meta Cloud API)**
+
+1. In https://business.facebook.com create a Meta Business account, then in
+   https://developers.facebook.com create an app of type Business and add
+   the WhatsApp product.
+2. Add a phone number that is **not** on the WhatsApp or WhatsApp Business
+   app, verify it by SMS, and set the display name "KiraayaSense".
+3. Add a payment method in WhatsApp Manager (India utility messages cost
+   about ₹0.12 each; the code messages cost a little more).
+4. Create a System User (Business settings → Users → System users), give it
+   the app with `whatsapp_business_messaging` and
+   `whatsapp_business_management`, and generate a permanent token.
+5. Submit every template in `deploy/WHATSAPP_TEMPLATES.md`.
+6. Add to `.env`:
+
+```bash
+WHATSAPP_PHONE_NUMBER_ID="..."   # from WhatsApp → API setup, not the phone number itself
+WHATSAPP_ACCESS_TOKEN="..."
+```
+
+Reload with `pm2 reload kiraayasense --update-env`. Then sign in, open
+Profile → Alerts, verify your own number with the code, and switch on the
+alerts you want.
+
+**9 AM summary.** `deploy.sh` creates `CRON_SECRET` in `.env` and installs a
+cron job at 03:30 UTC (9:00 IST) that calls `/api/cron/daily-alerts`. It
+sends the admin summary, the day's "helpful" digest and the points credited.
+Its log is `/home/kiraaya/alerts.log`. To run it by hand:
+`bash /home/kiraaya/app/deploy/daily-alerts.sh`.
+
 ## Backups
 
 - `deploy/backup.sh` runs nightly at 03:30 IST: a `pg_dump` plus the uploaded

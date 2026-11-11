@@ -1,49 +1,36 @@
-import Link from "next/link";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { brand, brandGradient } from "@/lib/brand";
-import { SignOutButton } from "./SignOutButton";
+import { authOptions, isAdminSession } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { brand } from "@/lib/brand";
+import { AdminShell, type AdminCounts } from "@/components/admin/AdminShell";
 
+/**
+ * The admin's own app shell: sidebar, top bar, one sign-out. The public site
+ * header hides itself under /admin (components/layout/Header.tsx).
+ * middleware.ts already keeps non-admins out (except /admin/login, which
+ * renders bare here) and keeps moderators out of super-admin sections.
+ */
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  // middleware.ts already blocks non-admins from reaching this layout at
-  // all; this session read is just to greet the signed-in admin by name.
   const session = await getServerSession(authOptions);
+  if (!isAdminSession(session)) {
+    return <div style={{ background: brand.navy, minHeight: "100vh" }}>{children}</div>;
+  }
+
+  const [reviews, reports, replies, claims, banners] = await Promise.all([
+    prisma.review.count({ where: { status: "PENDING_REVIEW" } }),
+    prisma.review.count({ where: { OR: [{ status: "SUSPENDED" }, { status: "APPROVED", flags: { some: { resolution: "OPEN" } } }] } }),
+    prisma.ownerResponse.count({ where: { status: "PENDING_REVIEW" } }),
+    prisma.businessClaim.count({ where: { status: "PENDING" } }),
+    prisma.adBanner.count({ where: { status: "ACTIVE" } }),
+  ]);
+  const counts: AdminCounts = { reviews, reports, replies, claims, banners };
 
   return (
-    <div style={{ background: brand.navy, minHeight: "100vh" }}>
-      <header className="border-b" style={{ borderColor: "var(--ks-border-soft)" }}>
-        <div className="mx-auto flex max-w-5xl items-center gap-6 px-4 py-3 sm:px-6">
-          <Link href="/admin" className="text-sm font-bold tracking-tight">
-            <span style={{ color: brand.white }}>Kiraaya</span>
-            <span
-              style={{ background: brandGradient, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }}
-            >
-              Sense
-            </span>
-            <span className="ml-1.5 text-xs font-normal" style={{ color: "var(--ks-text-faint)" }}>
-              Admin
-            </span>
-          </Link>
-          <nav className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-medium" style={{ color: "var(--ks-text-muted)" }}>
-            <Link href="/admin" className="hover:text-[var(--ks-text)]">Dashboard</Link>
-            <Link href="/admin/banners" className="hover:text-[var(--ks-text)]">Banners</Link>
-            <Link href="/admin/reviews" className="hover:text-[var(--ks-text)]">Reviews</Link>
-            <Link href="/admin/reports" className="hover:text-[var(--ks-text)]">Reports</Link>
-            <Link href="/admin/replies" className="hover:text-[var(--ks-text)]">Replies</Link>
-            <Link href="/admin/properties" className="hover:text-[var(--ks-text)]">Businesses</Link>
-            <Link href="/admin/claims" className="hover:text-[var(--ks-text)]">Claims</Link>
-            <Link href="/admin/imports" className="hover:text-[var(--ks-text)]">Imports</Link>
-            <Link href="/admin/categories" className="hover:text-[var(--ks-text)]">Categories</Link>
-            <Link href="/admin/question-sets" className="hover:text-[var(--ks-text)]">Questions</Link>
-          </nav>
-          <div className="ml-auto flex items-center gap-3 text-xs" style={{ color: "var(--ks-text-muted)" }}>
-            <Link href="/" className="whitespace-nowrap hover:text-[var(--ks-text)]">← Back to site</Link>
-            <span>{session?.user?.email}</span>
-            <SignOutButton />
-          </div>
-        </div>
-      </header>
-      <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6">{children}</main>
-    </div>
+    <AdminShell
+      counts={counts}
+      user={{ name: session!.user.name ?? "", email: session!.user.email ?? "", role: session!.user.role ?? "MODERATOR" }}
+    >
+      {children}
+    </AdminShell>
   );
 }

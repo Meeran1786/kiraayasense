@@ -4,6 +4,7 @@ import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { awardApprovedReview } from "@/lib/rewards";
+import { onReviewDecided } from "@/lib/notify/events";
 
 const decisionSchema = z.discriminatedUnion("decision", [
   z.object({
@@ -74,5 +75,6 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     });
   });
 
+  onReviewDecided(review.id, input.decision === "APPROVE");
   return NextResponse.json({ ok: true });
 }

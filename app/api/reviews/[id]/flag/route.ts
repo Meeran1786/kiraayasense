@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { AUTO_SUSPEND_REPORTS, flagSchema } from "@/lib/flags";
+import { onReviewReported } from "@/lib/notify/events";
 
 const error = (status: number, code: string, message: string) =>
   NextResponse.json({ error: { code, message } }, { status });
@@ -35,18 +36,22 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   if (existing) return error(409, "ALREADY_REPORTED", "You've already reported this review. A moderator will look at it.");
 
   const ownerId = review.property.claimStatus === "VERIFIED" ? review.property.claimedByUserId : null;
-  await prisma.$transaction(async (tx) => {
+  const hidden = await prisma.$transaction(async (tx) => {
     await tx.reviewFlag.create({
       data: { reviewId: review.id, flaggedByUserId: session.user.id, reason: parsed.data.reason, details: parsed.data.details },
     });
-    if (review.status !== "APPROVED") return;
+    if (review.status !== "APPROVED") return false;
     const counted = await tx.reviewFlag.count({
       where: { reviewId: review.id, resolution: "OPEN", ...(ownerId ? { flaggedByUserId: { not: ownerId } } : {}) },
     });
     if (counted >= AUTO_SUSPEND_REPORTS) {
       await tx.review.update({ where: { id: review.id }, data: { status: "SUSPENDED" } });
+      return true;
     }
+    return false;
   });
+
+  onReviewReported(review.id, hidden, session.user.id);
 
   return NextResponse.json({ ok: true }, { status: 201 });
 }
