@@ -25,7 +25,7 @@ const EMPTY: BannerFormValues = {
   imageStorageKey: "",
   clickThroughUrl: "",
   placement: "HOME_HERO",
-  status: "DRAFT",
+  status: "ACTIVE",
   targetImpressions: 10000,
   startAt: new Date().toISOString().slice(0, 10),
   endAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
