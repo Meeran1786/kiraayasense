@@ -14,6 +14,21 @@ export default async function AdminBannersPage() {
         _count: true,
       })
     : [];
+  // Same rule as liveBanners(): which banners the home carousel shows right now, and why the others don't.
+  const now = new Date();
+  const liveIds = banners
+    .filter((b) => b.placement === "HOME_HERO" && b.status === "ACTIVE" && b.startAt <= now && b.endAt >= now && bannerImageUrl(b.imageStorageKey))
+    .slice(0, HOME_BANNER_LIMIT)
+    .map((b) => b.id);
+  const onHome = (b: (typeof banners)[number]): { live: boolean; why: string } => {
+    if (liveIds.includes(b.id)) return { live: true, why: "Showing" };
+    if (b.placement !== "HOME_HERO") return { live: false, why: "Different placement" };
+    if (!bannerImageUrl(b.imageStorageKey)) return { live: false, why: "No usable image" };
+    if (b.status !== "ACTIVE") return { live: false, why: `${b.status.charAt(0)}${b.status.slice(1).toLowerCase()}: press Activate` };
+    if (b.startAt > now) return { live: false, why: `Starts ${istDate(b.startAt)}` };
+    if (b.endAt < now) return { live: false, why: `Ended ${istDate(b.endAt)}` };
+    return { live: false, why: `Only the first ${HOME_BANNER_LIMIT} show` };
+  };
   const count = (id: string, type: "IMPRESSION" | "CLICK") =>
     events.find((e) => e.bannerId === id && e.eventType === type)?._count ?? 0;
 
@@ -33,6 +48,9 @@ export default async function AdminBannersPage() {
         The home page carousel shows up to {HOME_BANNER_LIMIT} banners with placement “Home page carousel”, status Active and
         today inside their run dates, lowest position first. Images: 1600 × 400 px (4:1).
       </p>
+      <p className="mt-1 text-xs font-semibold text-[var(--ks-text)]">
+        {liveIds.length} of {HOME_BANNER_LIMIT} carousel slots in use right now.
+      </p>
 
       <div className="mt-6 overflow-x-auto rounded-xl border" style={{ borderColor: "var(--ks-border)" }}>
         <table className="w-full text-left text-sm">
@@ -42,6 +60,7 @@ export default async function AdminBannersPage() {
               <th className="px-4 py-2.5">Banner</th>
               <th className="px-4 py-2.5">Placement</th>
               <th className="px-4 py-2.5">Status</th>
+              <th className="px-4 py-2.5">On home page</th>
               <th className="px-4 py-2.5">Advertiser</th>
               <th className="px-4 py-2.5">Runs</th>
               <th className="px-4 py-2.5">Views / clicks</th>
@@ -51,7 +70,7 @@ export default async function AdminBannersPage() {
           <tbody>
             {banners.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-4 py-8 text-center text-[var(--ks-text-faint)]">
+                <td colSpan={9} className="px-4 py-8 text-center text-[var(--ks-text-faint)]">
                   No banners yet.
                 </td>
               </tr>
@@ -72,6 +91,10 @@ export default async function AdminBannersPage() {
                 </td>
                 <td className="px-4 py-2.5 text-[var(--ks-text-muted)]">{b.placement === "HOME_HERO" ? "Home carousel" : b.placement}</td>
                 <td className="px-4 py-2.5 text-[var(--ks-text-muted)]">{b.status}</td>
+                <td className="whitespace-nowrap px-4 py-2.5 text-xs font-semibold" style={{ color: onHome(b).live ? "var(--ks-success, #16a34a)" : "var(--ks-coral)" }}>
+                  {onHome(b).live ? "✓ " : ""}
+                  {onHome(b).why}
+                </td>
                 <td className="px-4 py-2.5 text-[var(--ks-text-muted)]">{b.advertiserName}</td>
                 <td className="px-4 py-2.5 text-[var(--ks-text-faint)]">
                   {istDate(b.startAt)} → {istDate(b.endAt)}

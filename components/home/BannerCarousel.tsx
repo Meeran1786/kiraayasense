@@ -6,7 +6,9 @@ import { useT } from "@/lib/i18n/client";
 import { localeInfo } from "@/lib/i18n/locales";
 import type { PublicBanner } from "@/lib/banners";
 
-const SLIDE_MS = 6000;
+/** Time each banner stays before sliding on, and how long the slide takes. */
+const SLIDE_MS = 3500;
+const MOVE_MS = 450;
 
 function sessionId(): string {
   try {
@@ -121,7 +123,7 @@ export function BannerCarousel({ banners }: { banners: PublicBanner[] }) {
           className="flex"
           style={{
             transform: `translateX(${offset}%)`,
-            transition: reduceMotion ? "none" : "transform 500ms ease",
+            transition: reduceMotion ? "none" : `transform ${MOVE_MS}ms cubic-bezier(0.22, 0.61, 0.36, 1)`,
           }}
         >
           {banners.map((b, i) => (
