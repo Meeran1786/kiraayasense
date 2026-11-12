@@ -300,6 +300,18 @@ export interface SearchFilters {
 export type SearchSort = "rating_desc" | "review_count_desc" | "newest" | "nearest";
 export const SEARCH_SORTS: SearchSort[] = ["rating_desc", "review_count_desc", "newest", "nearest"];
 
+/**
+ * Published listings on a category / state / city page. Used to keep empty
+ * pages out of search results, where Google reports them as soft 404s.
+ */
+export async function countListings(filters: Pick<SearchFilters, "category" | "state" | "city">): Promise<number> {
+  const where: Prisma.PropertyWhereInput = { status: "APPROVED" };
+  if (filters.category) where.categoryId = { in: await categoryIdsForSlug(filters.category) };
+  if (filters.state) where.state = filters.state;
+  if (filters.city) where.district = filters.city;
+  return prisma.property.count({ where });
+}
+
 export async function searchProperties(filters: SearchFilters): Promise<DbProperty[]> {
   const where: Prisma.PropertyWhereInput = { status: "APPROVED" };
 

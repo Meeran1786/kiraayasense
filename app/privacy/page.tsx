@@ -2,7 +2,7 @@ import Link from "next/link";
 import { LegalPage } from "@/components/legal/LegalPage";
 import { CONTACT_EMAIL } from "@/lib/legal";
 
-export const metadata = { title: "Privacy policy — KiraayaSense" };
+export const metadata = { title: "Privacy policy — KiraayaSense", alternates: { canonical: "/privacy" } };
 
 export default function PrivacyPage() {
   return (

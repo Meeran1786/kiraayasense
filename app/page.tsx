@@ -10,6 +10,11 @@ import { getCategoryTree } from "@/lib/db/categories";
 import { getT } from "@/lib/i18n/server";
 import { categoryName } from "@/lib/i18n/translate";
 
+// Only the home page points its canonical at "/". (It used to be set in the
+// root layout, which made every page without its own canonical, such as
+// /privacy and /terms, claim to be a copy of the home page.)
+export const metadata = { alternates: { canonical: "/" } };
+
 export default async function Home() {
   const [categories, banners] = await Promise.all([getCategoryTree(), liveBanners("HOME_HERO").catch(() => [])]);
   const t = getT();

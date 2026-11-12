@@ -131,7 +131,7 @@ export function BannerCarousel({ banners }: { banners: PublicBanner[] }) {
               key={b.id}
               href={`/api/banners/${b.id}/click?s=${encodeURIComponent(sid)}`}
               target="_blank"
-              rel="sponsored noopener"
+              rel="sponsored nofollow noopener"
               className="relative block w-full shrink-0"
               aria-roledescription="slide"
               aria-label={`${b.title} (${t("ads.label")}, ${i + 1}/${count})`}
