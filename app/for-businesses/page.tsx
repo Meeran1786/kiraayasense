@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { getServerSession } from "next-auth";
-import { BadgeCheck, Flag, LayoutDashboard, MessageSquareReply, QrCode, Search, ShieldCheck, Smartphone, Star } from "lucide-react";
+import { BadgeCheck, PlayCircle, Flag, LayoutDashboard, MessageSquareReply, QrCode, Search, ShieldCheck, Smartphone, Star } from "lucide-react";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Footer } from "@/components/layout/Footer";
@@ -83,6 +83,13 @@ export default async function ForBusinessesPage() {
             {t("biz.addCta")}
           </Link>
         </p>
+        <Link
+          href="/tutorials#businesses"
+          className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--ks-text)] underline"
+        >
+          <PlayCircle size={16} style={{ color: "var(--ks-coral)" }} />
+          {t("biz.watchGuide")}
+        </Link>
       </section>
 
       <div className="mx-auto flex max-w-6xl flex-col gap-12 px-4 pb-14 sm:px-6">

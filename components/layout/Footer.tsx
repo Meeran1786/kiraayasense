@@ -19,6 +19,10 @@ export function Footer() {
           ·{" "}
           <Link href="/for-businesses" className="underline">
             {t("footer.owners")}
+          </Link>{" "}
+          ·{" "}
+          <Link href="/tutorials" className="underline">
+            {t("footer.tutorials")}
           </Link>
         </p>
       </div>
