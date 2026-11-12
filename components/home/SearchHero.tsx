@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Search } from "lucide-react";
+import { PlayCircle, Search } from "lucide-react";
 import { brand, brandGradient } from "@/lib/brand";
 import { useT } from "@/lib/i18n/client";
 
@@ -80,6 +81,13 @@ export function SearchHero({
           {t("home.search")}
         </button>
       </form>
+      <Link
+        href="/tutorials"
+        className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--ks-text-muted)] hover:text-[var(--ks-text)]"
+      >
+        <PlayCircle size={15} style={{ color: "var(--ks-coral)" }} />
+        {t("home.watchTutorial")}
+      </Link>
     </section>
   );
 }

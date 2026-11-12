@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Search, UserCircle2, LogOut, Store, ShieldCheck } from "lucide-react";
+import { Search, UserCircle2, LogOut, Store, ShieldCheck, PlayCircle } from "lucide-react";
 import { Bell } from "@/components/notifications/Bell";
 import { useAuth } from "@/lib/authContext";
 import { SignInModal } from "@/components/auth/SignInModal";
@@ -68,7 +68,14 @@ export function Header({ navCategories }: { navCategories: { slug: string; name:
           </form>
 
           <nav className="hidden items-center gap-4 lg:flex">
-            {navCategories.slice(0, 3).map((c) => (
+            <Link
+              href="/tutorials"
+              className="flex items-center gap-1 whitespace-nowrap text-xs font-semibold text-[var(--ks-text)] transition-colors hover:text-[var(--ks-coral)]"
+            >
+              <PlayCircle size={14} style={{ color: "var(--ks-coral)" }} />
+              {t("nav.tutorials")}
+            </Link>
+            {navCategories.slice(0, 2).map((c) => (
               <Link
                 key={c.slug}
                 href={`/search?category=${c.slug}`}
