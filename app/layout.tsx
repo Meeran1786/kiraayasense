@@ -25,7 +25,6 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: "KiraayaSense — honest, proof-backed reviews",
   description: DESCRIPTION,
-  alternates: { canonical: "/" },
   openGraph: { type: "website", siteName: SITE_NAME, locale: "en_IN", description: DESCRIPTION },
   twitter: { card: "summary" },
   applicationName: SITE_NAME,

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { LegalPage } from "@/components/legal/LegalPage";
 import { CONTACT_EMAIL } from "@/lib/legal";
 
-export const metadata = { title: "Terms of use — KiraayaSense" };
+export const metadata = { title: "Terms of use — KiraayaSense", alternates: { canonical: "/terms" } };
 
 export default function TermsPage() {
   return (

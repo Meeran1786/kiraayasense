@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { SEARCH_LIMIT, SEARCH_SORTS, searchProperties, type SearchSort } from "@/lib/db/properties";
+import { SEARCH_LIMIT, SEARCH_SORTS, countListings, searchProperties, type SearchSort } from "@/lib/db/properties";
 import { locationOptions } from "@/lib/db/locations";
 import { HOW_RATINGS_WORK, topRated } from "@/lib/geo";
 import { SITE_URL } from "@/lib/site";
@@ -54,10 +54,15 @@ async function describe(p: Params, localityName?: string) {
 export async function generateMetadata({ searchParams }: SearchPageProps): Promise<Metadata> {
   const { category, place } = await describe(searchParams);
   // Category and city pages are worth indexing; free-text, rating, locality
-  // and near-me searches are not.
-  const indexable =
+  // and near-me searches are not. Neither is an unknown category or a page
+  // with no listings yet: Google reports those as soft 404s.
+  const filtersOnly =
     !searchParams.q && !searchParams.minRating && !searchParams.sort && !searchParams.locality && !searchParams.lat &&
     !searchParams.verified && !searchParams.reviewed;
+  const indexable =
+    filtersOnly &&
+    (!searchParams.category || !!category) &&
+    (await countListings({ category: category?.slug, state: searchParams.state, city: searchParams.city })) > 0;
   const where = ` ${place || "in India"}`;
   const title = category
     ? `${category.name}${where} — reviews and ratings | KiraayaSense`

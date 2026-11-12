@@ -29,7 +29,7 @@ export function SourceCredit({
       ) : (
         <p>
           Own or manage this business?{" "}
-          <Link href={`/property/${propertyId}/claim`} className="font-medium text-[var(--ks-text-muted)] underline">
+          <Link href={`/property/${propertyId}/claim`} rel="nofollow" className="font-medium text-[var(--ks-text-muted)] underline">
             Claim this listing
           </Link>{" "}
           to correct its details and respond to reviews.
