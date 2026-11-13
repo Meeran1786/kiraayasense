@@ -1,17 +1,20 @@
 import Link from "next/link";
 import { getServerSession } from "next-auth";
-import { ArrowLeft, Clock, Coins, Wallet } from "lucide-react";
+import { ArrowLeft, Camera, Clock, Coins, Repeat, ShieldCheck, ThumbsUp, Wallet } from "lucide-react";
 import { authOptions } from "@/lib/auth";
 import {
   HOLD_DAYS,
   MAX_HELPFUL_POINTS_PER_REVIEW,
   MAX_REWARDED_REVIEWS_PER_DAY,
-  MIN_WITHDRAWAL_RUPEES,
+  PAYOUT_RUPEES,
   POINTS,
-  POOL_SHARE,
-  cashRewardsEnabled,
+  POINTS_PER_PAYOUT,
+  formatRupees,
+  payoutProgress,
   rewardsSummary,
+  type RewardsSummary,
 } from "@/lib/rewards";
+import { PayoutProgress } from "@/components/rewards/PayoutProgress";
 import { SignInPrompt } from "@/components/auth/SignInPrompt";
 import { Footer } from "@/components/layout/Footer";
 import { brand } from "@/lib/brand";
@@ -36,8 +39,17 @@ export default async function RewardsPage() {
   }
 
   const summary = await rewardsSummary(session.user.id);
-  const cash = cashRewardsEnabled();
+  const { payoutsReady } = payoutProgress(summary.available, summary.pending);
   const now = new Date();
+  // Helpful votes on one review on one day show as a single "×N" row.
+  const history: (RewardsSummary["history"][number] & { count: number })[] = [];
+  for (const e of summary.history) {
+    const last = history[history.length - 1];
+    if (last && last.kind === e.kind && last.business.id === e.business.id && fmtDate(last.createdAt) === fmtDate(e.createdAt)) {
+      last.points += e.points;
+      last.count++;
+    } else history.push({ ...e, count: 1 });
+  }
 
   return (
     <main style={{ background: brand.navy, minHeight: "100vh" }}>
@@ -51,49 +63,92 @@ export default async function RewardsPage() {
           </h1>
         </div>
 
-        <section className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <Card label="Total points" value={summary.total} />
-          <Card label="Available" value={summary.available} hint="Ready to count toward rewards" />
-          <Card label="Pending" value={summary.pending} hint={`Held for ${HOLD_DAYS} days after you earn them`} />
-        </section>
-
-        <section className="rounded-xl border p-4" style={{ borderColor: "var(--ks-border)", background: "var(--ks-bg-elevated)" }}>
-          <h2 className="text-sm font-semibold text-[var(--ks-text)]">Cash rewards</h2>
-          {cash ? (
-            <>
-              <p className="mt-1 text-sm text-[var(--ks-text-muted)]">
-                Each month, {Math.round(POOL_SHARE * 100)}% of KiraayaSense&apos;s ad income goes into a reward pool, shared by
-                everyone&apos;s available points. You can withdraw to UPI once your share reaches ₹{MIN_WITHDRAWAL_RUPEES}.
+        <section className="flex flex-col gap-4 rounded-xl border p-5" style={{ borderColor: "var(--ks-border)", background: "var(--ks-bg-elevated)" }}>
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className="text-xs text-[var(--ks-text-faint)]">Your points are worth</p>
+              <p className="text-3xl font-bold text-[var(--ks-text)]">{formatRupees(summary.total)}</p>
+              <p className="text-xs text-[var(--ks-text-muted)]">
+                {summary.total.toLocaleString("en-IN")} points · {POINTS_PER_PAYOUT.toLocaleString("en-IN")} points = ₹{PAYOUT_RUPEES}
               </p>
+            </div>
+            <div className="flex flex-col items-start gap-1 sm:items-end">
               <button
                 type="button"
                 disabled
-                className="mt-3 rounded-lg px-4 py-2 text-sm font-semibold text-slate-950 opacity-60"
+                className="cursor-not-allowed rounded-lg px-4 py-2 text-sm font-semibold text-slate-950 opacity-60"
                 style={{ background: "var(--ks-success)" }}
+                title="Payouts to UPI or bank are coming soon"
               >
-                Withdraw to UPI
+                {payoutsReady > 0 ? `Redeem ${formatRupees(payoutsReady * POINTS_PER_PAYOUT)}` : "Redeem"} · coming soon
               </button>
-            </>
-          ) : (
-            <p className="mt-1 text-sm text-[var(--ks-text-muted)]">
-              Cash rewards are coming soon. Every point you earn now is saved and will count when payouts start.
-            </p>
-          )}
+              <p className="text-[11px] text-[var(--ks-text-faint)]">
+                {payoutsReady > 0
+                  ? "Ready to redeem. We'll let you know when payouts open."
+                  : `You can redeem from ₹${PAYOUT_RUPEES} (${POINTS_PER_PAYOUT.toLocaleString("en-IN")} available points).`}
+              </p>
+            </div>
+          </div>
+          <PayoutProgress available={summary.available} pending={summary.pending} />
+          <p className="text-[11px] text-[var(--ks-text-faint)]">
+            Payouts will go straight to your UPI or bank account. Redeeming isn&apos;t open yet, but every point you earn now is saved and
+            keeps its value.
+          </p>
+        </section>
+
+        <section className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <Card label="Total points" value={summary.total} />
+          <Card label="Available" value={summary.available} hint="Finished the 30-day hold" />
+          <Card
+            label="On hold"
+            value={summary.pending}
+            hint={
+              summary.nextUnlock
+                ? `${summary.nextUnlock.points} unlock on ${fmtDate(summary.nextUnlock.at)}`
+                : `Held for ${HOLD_DAYS} days after you earn them`
+            }
+          />
+        </section>
+
+        <section className="rounded-xl border p-4" style={{ borderColor: "var(--ks-border)", background: "var(--ks-bg-elevated)" }}>
+          <h2 className="text-sm font-semibold text-[var(--ks-text)]">Earn more</h2>
+          <ul className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <Nudge icon={<ShieldCheck size={16} />} points={POINTS.VERIFIED_REVIEW} title="Write a review with proof">
+              Attach a bill, rent receipt or UPI payment so it gets verified.
+            </Nudge>
+            <Nudge icon={<Camera size={16} />} points={POINTS.PHOTO} title="Add a photo">
+              Photos of the room, food or building earn {POINTS.PHOTO} more on a verified review.
+            </Nudge>
+            <Nudge icon={<ThumbsUp size={16} />} points={POINTS.HELPFUL_VOTE} title="Get Helpful votes">
+              Detailed, useful reviews get marked helpful. {POINTS.HELPFUL_VOTE} point each, up to {MAX_HELPFUL_POINTS_PER_REVIEW} per review.
+            </Nudge>
+            <Nudge icon={<Repeat size={16} />} points={POINTS.VERIFIED_REVIEW} title="Review a new visit">
+              Stayed again? Add a new visit 30 days after the last one.
+            </Nudge>
+          </ul>
+          <Link
+            href="/search"
+            className="mt-3 inline-block rounded-lg px-4 py-2 text-sm font-semibold text-slate-950"
+            style={{ background: "var(--ks-coral)" }}
+          >
+            Find a place to review
+          </Link>
         </section>
 
         <section>
           <h2 className="mb-3 text-sm font-semibold text-[var(--ks-text)]">History</h2>
-          {summary.history.length === 0 ? (
+          {history.length === 0 ? (
             <div className="rounded-xl border p-6 text-center text-sm" style={{ borderColor: "var(--ks-border)", color: "var(--ks-text-faint)" }}>
               No points yet. Write a review with proof (a bill, receipt or UPI payment) to earn your first {POINTS.VERIFIED_REVIEW}.
             </div>
           ) : (
             <ul className="divide-y rounded-xl border" style={{ borderColor: "var(--ks-border)", background: "var(--ks-bg-elevated)" }}>
-              {summary.history.map((e) => (
+              {history.map((e) => (
                 <li key={e.id} className="flex items-center justify-between gap-3 px-4 py-3" style={{ borderColor: "var(--ks-border)" }}>
                   <div className="min-w-0">
                     <p className="text-sm text-[var(--ks-text)]">
-                      {KIND_LABELS[e.kind]} ·{" "}
+                      {KIND_LABELS[e.kind]}
+                      {e.count > 1 && ` ×${e.count}`} ·{" "}
                       <Link href={`/property/${e.business.id}`} className="hover:underline">
                         {e.business.name}
                       </Link>
@@ -108,8 +163,9 @@ export default async function RewardsPage() {
                       )}
                     </p>
                   </div>
-                  <span className="shrink-0 text-sm font-semibold" style={{ color: "var(--ks-success)" }}>
+                  <span className="shrink-0 text-right text-sm font-semibold" style={{ color: "var(--ks-success)" }}>
                     +{e.points}
+                    <span className="block text-[10px] font-normal text-[var(--ks-text-faint)]">{formatRupees(e.points)}</span>
                   </span>
                 </li>
               ))}
@@ -122,6 +178,10 @@ export default async function RewardsPage() {
             <Coins size={14} /> How points work
           </h2>
           <ul className="flex list-disc flex-col gap-1 pl-4">
+            <li>
+              {POINTS_PER_PAYOUT.toLocaleString("en-IN")} points are worth ₹{PAYOUT_RUPEES} (₹{(PAYOUT_RUPEES / POINTS_PER_PAYOUT).toFixed(2)} a point).
+              Points count toward a payout once they finish the {HOLD_DAYS}-day hold.
+            </li>
             <li>{POINTS.VERIFIED_REVIEW} points for each review approved with proof, and {POINTS.PHOTO} more if it has a photo.</li>
             <li>
               {POINTS.HELPFUL_VOTE} point each time someone marks your verified review helpful, up to {MAX_HELPFUL_POINTS_PER_REVIEW} per review.
@@ -137,11 +197,30 @@ export default async function RewardsPage() {
   );
 }
 
+function Nudge({ icon, points, title, children }: { icon: React.ReactNode; points: number; title: string; children: React.ReactNode }) {
+  return (
+    <li className="flex gap-3 rounded-lg border p-3" style={{ borderColor: "var(--ks-border)", background: "var(--ks-bg-elevated-2)" }}>
+      <span className="mt-0.5 shrink-0 text-[var(--ks-coral)]">{icon}</span>
+      <div className="min-w-0">
+        <p className="text-sm font-medium text-[var(--ks-text)]">
+          {title}{" "}
+          <span className="text-xs font-semibold" style={{ color: "var(--ks-success)" }}>
+            +{points} ({formatRupees(points)})
+          </span>
+        </p>
+        <p className="text-xs text-[var(--ks-text-muted)]">{children}</p>
+      </div>
+    </li>
+  );
+}
+
 function Card({ label, value, hint }: { label: string; value: number; hint?: string }) {
   return (
     <div className="rounded-xl border p-4" style={{ borderColor: "var(--ks-border)", background: "var(--ks-bg-elevated)" }}>
       <p className="text-2xl font-bold text-[var(--ks-text)]">{value.toLocaleString("en-IN")}</p>
-      <p className="text-xs text-[var(--ks-text-faint)]">{label}</p>
+      <p className="text-xs text-[var(--ks-text-faint)]">
+        {label} · {formatRupees(value)}
+      </p>
       {hint && <p className="mt-1 text-[11px] text-[var(--ks-text-faint)]">{hint}</p>}
     </div>
   );
