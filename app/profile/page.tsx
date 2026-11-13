@@ -15,6 +15,8 @@ import { AlertSettings } from "@/components/profile/AlertSettings";
 import { ALERT_TYPES, channelPrefs, type AlertType } from "@/lib/notify/types";
 import { whatsappConfigured } from "@/lib/notify/whatsapp";
 import { maskPhone } from "@/lib/notify/phone";
+import { pointsBalance } from "@/lib/rewards";
+import { RewardsTeaser } from "@/components/rewards/RewardsTeaser";
 
 export const metadata = { title: "Your profile — KiraayaSense" };
 
@@ -23,6 +25,7 @@ export default async function OwnProfilePage() {
   const profile = session?.user?.id ? await getOwnProfile(session.user.id) : null;
   const managed = session?.user?.id ? await managedProperties(session.user.id) : [];
   const alerts = session?.user?.id ? await alertSettings(session.user.id, managed.length > 0) : null;
+  const balance = session?.user?.id ? await pointsBalance(session.user.id) : null;
 
   return (
     <main style={{ background: brand.navy, minHeight: "100vh" }}>
@@ -30,6 +33,7 @@ export default async function OwnProfilePage() {
         {profile ? (
           <>
             <ProfileHeader profile={profile} ownView />
+            {balance && <RewardsTeaser available={balance.available} pending={balance.pending} />}
             {managed.length > 0 && (
               <Link
                 href="/owner"

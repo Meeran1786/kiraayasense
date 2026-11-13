@@ -44,7 +44,7 @@ export const TUTORIALS: Tutorial[] = [
       "KiraayaSense. Real reviews, backed by real proof.",
       "Reviews can be backed by a rent receipt, a bill or a UPI payment, so you know they come from real tenants, customers and employees.",
       "See ratings for what really matters, like food, safety, water and deposits, for PGs, hostels, flats, hotels, colleges, hospitals and more.",
-      "Earn while you review. Every verified review earns points, with bonus points for photos and helpful votes. Cash rewards are coming soon, and the points you earn now will count.",
+      "Earn while you review. Every verified review earns points, with bonus points for photos and helpful votes. Every 1,000 points is worth ₹100, paid to your UPI or bank. Payouts are coming soon, and the points you earn now will count.",
       "Students can earn while they learn. Review your PG, hostel, mess or college, help juniors choose well, and collect points and badges.",
       "For businesses, it is a free way to grow. Claim your listing, reply to reviews, and build the trust that brings in more customers.",
       "Share your review link on WhatsApp, print a QR poster, and show your rating badge on your website, to get reviews from every customer.",

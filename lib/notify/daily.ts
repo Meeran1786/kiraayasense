@@ -2,6 +2,7 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 import { ADMIN_ROLES } from "@/lib/auth";
 import { SITE_URL } from "@/lib/site";
+import { formatRupees } from "@/lib/rewards";
 import { recipientSelect, deliverNow, plan } from "./index";
 import { sendEmail } from "./email";
 import { sendTemplate } from "./whatsapp";
@@ -105,7 +106,7 @@ export async function runDailyAlerts(now = new Date()) {
     await deliverNow([row.userId], {
       type: "POINTS_CREDITED",
       title: `${points} points are now yours`,
-      body: `${points} KiraayaSense points finished their 30-day hold and are now available in your rewards.`,
+      body: `${points} KiraayaSense points (worth ${formatRupees(points)}) finished their 30-day hold and are now available in your rewards.`,
       link: "/profile/rewards",
       whatsapp: { name: "ks_points_credited", params: [String(points), `${SITE_URL}/profile/rewards`] },
     });

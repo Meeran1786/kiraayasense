@@ -8,19 +8,54 @@ import { prisma } from "@/lib/prisma";
  * available 30 days after they are earned. Points stop counting if their
  * review is later suspended or rejected.
  *
- * Cash is a later switch: REWARDS_CASH_ENABLED=true shows the UPI withdrawal.
- * When it is on, each month's pool is POOL_SHARE of that month's ad income,
- * split by share of points. Rewards are never tied to ad views or clicks.
+ * Points have a fixed cash value: every POINTS_PER_PAYOUT available points
+ * can be redeemed for PAYOUT_RUPEES (1,000 points = ₹100, so ₹0.10 a point),
+ * paid straight to the user's UPI or bank account. There is no wallet:
+ * KiraayaSense never holds the money. The payout itself is not built yet, so
+ * the Redeem button shows "coming soon". Rewards are never tied to ad views
+ * or clicks.
  */
 
 export const POINTS = { VERIFIED_REVIEW: 10, PHOTO: 5, HELPFUL_VOTE: 1 } as const;
 export const MAX_HELPFUL_POINTS_PER_REVIEW = 20;
 export const MAX_REWARDED_REVIEWS_PER_DAY = 10;
 export const HOLD_DAYS = 30;
-export const POOL_SHARE = 0.25;
-export const MIN_WITHDRAWAL_RUPEES = 100;
+export const POINTS_PER_PAYOUT = 1000;
+export const PAYOUT_RUPEES = 100;
+export const RUPEES_PER_POINT = PAYOUT_RUPEES / POINTS_PER_PAYOUT;
 
-export const cashRewardsEnabled = () => process.env.REWARDS_CASH_ENABLED === "true";
+/** Rupee value of `points`, e.g. 1234 -> "₹123.40", 1000 -> "₹100". */
+export function formatRupees(points: number): string {
+  const paise = points * RUPEES_PER_POINT * 100;
+  const rupees = Math.round(paise) / 100;
+  return `₹${rupees.toLocaleString("en-IN", {
+    minimumFractionDigits: Number.isInteger(rupees) ? 0 : 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
+export interface PayoutProgress {
+  /** Whole ₹100 payouts the available points already cover. */
+  payoutsReady: number;
+  /** Available points toward the next payout (0..POINTS_PER_PAYOUT-1). */
+  availableInStep: number;
+  /** Pending points that will land in the next payout step once their hold ends. */
+  pendingInStep: number;
+  /** Points still to earn (beyond pending) for the next ₹100. */
+  toEarn: number;
+}
+
+export function payoutProgress(available: number, pending: number): PayoutProgress {
+  const payoutsReady = Math.floor(available / POINTS_PER_PAYOUT);
+  const availableInStep = available % POINTS_PER_PAYOUT;
+  const pendingInStep = Math.min(pending, POINTS_PER_PAYOUT - availableInStep);
+  const toEarn = POINTS_PER_PAYOUT - availableInStep - pendingInStep;
+  return { payoutsReady, availableInStep, pendingInStep, toEarn };
+}
+
+/** Verified reviews with a photo (the best case) needed to earn `points`. */
+export const reviewsWithPhotoFor = (points: number) =>
+  Math.ceil(points / (POINTS.VERIFIED_REVIEW + POINTS.PHOTO));
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const availableFrom = (now: Date) => new Date(now.getTime() + HOLD_DAYS * DAY_MS);
@@ -118,10 +153,38 @@ export async function totalPoints(userId: string): Promise<number> {
   return agg._sum.points ?? 0;
 }
 
+/** Available and held points, for the profile page. */
+export async function pointsBalance(userId: string, now = new Date()) {
+  const [available, pending, nextUnlock] = await Promise.all([
+    prisma.pointEvent.aggregate({ where: { ...liveEvents(userId), availableAt: { lte: now } }, _sum: { points: true } }),
+    prisma.pointEvent.aggregate({ where: { ...liveEvents(userId), availableAt: { gt: now } }, _sum: { points: true } }),
+    prisma.pointEvent.findFirst({
+      where: { ...liveEvents(userId), availableAt: { gt: now } },
+      orderBy: { availableAt: "asc" },
+      select: { availableAt: true },
+    }),
+  ]);
+  const a = available._sum.points ?? 0;
+  const p = pending._sum.points ?? 0;
+  let next: { at: Date; points: number } | null = null;
+  if (nextUnlock) {
+    // Everything that unlocks on the same (IST) day as the earliest held point.
+    const ist = 5.5 * 60 * 60 * 1000;
+    const dayEnd = new Date(Math.floor((nextUnlock.availableAt.getTime() + ist) / DAY_MS + 1) * DAY_MS - ist);
+    const sameDay = await prisma.pointEvent.aggregate({
+      where: { ...liveEvents(userId), availableAt: { gt: now, lt: dayEnd } },
+      _sum: { points: true },
+    });
+    next = { at: nextUnlock.availableAt, points: sameDay._sum.points ?? 0 };
+  }
+  return { total: a + p, available: a, pending: p, nextUnlock: next };
+}
+
 export interface RewardsSummary {
   total: number;
   available: number;
   pending: number;
+  nextUnlock: { at: Date; points: number } | null;
   history: {
     id: string;
     kind: PointKind;
@@ -133,9 +196,8 @@ export interface RewardsSummary {
 }
 
 export async function rewardsSummary(userId: string, now = new Date()): Promise<RewardsSummary> {
-  const [available, pending, history] = await Promise.all([
-    prisma.pointEvent.aggregate({ where: { ...liveEvents(userId), availableAt: { lte: now } }, _sum: { points: true } }),
-    prisma.pointEvent.aggregate({ where: { ...liveEvents(userId), availableAt: { gt: now } }, _sum: { points: true } }),
+  const [balance, history] = await Promise.all([
+    pointsBalance(userId, now),
     prisma.pointEvent.findMany({
       where: liveEvents(userId),
       orderBy: { createdAt: "desc" },
@@ -143,12 +205,8 @@ export async function rewardsSummary(userId: string, now = new Date()): Promise<
       include: { review: { select: { property: { select: { id: true, name: true } } } } },
     }),
   ]);
-  const a = available._sum.points ?? 0;
-  const p = pending._sum.points ?? 0;
   return {
-    total: a + p,
-    available: a,
-    pending: p,
+    ...balance,
     history: history.map((e) => ({
       id: e.id,
       kind: e.kind,
