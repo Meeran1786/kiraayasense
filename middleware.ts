@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
-import { ADMIN_ROLES, SUPER_ADMIN_SECTIONS } from "@/lib/auth";
+import { ADMIN_ROLES, SUPER_ADMIN_SECTIONS } from "@/lib/roles";
 
 /**
  * Gates every /admin/* route (pages and the /api/admin/* mutation routes)

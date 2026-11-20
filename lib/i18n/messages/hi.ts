@@ -216,6 +216,17 @@ const hi: Partial<Messages> = {
   "bell.labelUnread": "सूचनाएँ, {n} नई",
   "bell.settings": "अलर्ट सेटिंग",
   "bell.empty": "अभी कोई सूचना नहीं है।",
+
+  "home.nearMe": "मेरे आस-पास की जगहें",
+  "home.locating": "आपकी लोकेशन ढूँढ रहे हैं…",
+  "daily.toast": "आज KiraayaSense खोलने के लिए +{n} पॉइंट",
+  "daily.toastHint": "कल फिर आइए और एक और पाइए।",
+  "push.title": "अपना रोज़ का पॉइंट कभी न चूकें",
+  "push.body": "शाम को याद दिलाने के लिए और समीक्षा मंज़ूर होने या पॉइंट मिलने पर अलर्ट के लिए सूचनाएँ चालू करें।",
+  "push.iosBody": "iPhone पर Share दबाएँ, फिर Add to Home Screen चुनें, और वहीं से KiraayaSense खोलकर सूचनाएँ चालू करें।",
+  "push.turnOn": "चालू करें",
+  "push.notNow": "अभी नहीं",
+  "push.denied": "सूचनाएँ बंद हैं। ब्राउज़र की साइट सेटिंग में इन्हें अनुमति दें।",
 };
 
 export default hi;

@@ -28,7 +28,14 @@ echo "==> Settings and scheduled jobs"
 grep -q '^CRON_SECRET=' .env || echo "CRON_SECRET=\"$(openssl rand -hex 24)\"" >> .env
 # 03:30 UTC = 9:00 IST. Re-written on every deploy so the line stays current.
 ALERTS_CRON="30 3 * * * bash /home/kiraaya/app/deploy/daily-alerts.sh >> /home/kiraaya/alerts.log 2>&1"
-( crontab -l 2>/dev/null | grep -v deploy/daily-alerts.sh || true; echo "$ALERTS_CRON" ) | crontab -
+# 13:30 UTC = 7:00 PM IST: the "you're missing out on your point today" push.
+REMINDER_CRON="30 13 * * * bash /home/kiraaya/app/deploy/daily-reminder.sh >> /home/kiraaya/alerts.log 2>&1"
+( crontab -l 2>/dev/null | grep -v -e deploy/daily-alerts.sh -e deploy/daily-reminder.sh || true; echo "$ALERTS_CRON"; echo "$REMINDER_CRON" ) | crontab -
+# Web push needs a VAPID key pair; create one once. Never change it after
+# that, or every device that turned notifications on would have to again.
+if ! grep -q '^VAPID_PRIVATE_KEY=' .env; then
+  node -e 'const k=require("web-push").generateVAPIDKeys();console.log(`VAPID_PUBLIC_KEY="${k.publicKey}"\nVAPID_PRIVATE_KEY="${k.privateKey}"`)' >> .env
+fi
 
 echo "==> Building"
 npm run build

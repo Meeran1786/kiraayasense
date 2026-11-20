@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { getServerSession } from "next-auth";
-import { ArrowLeft, Camera, Clock, Coins, Repeat, ShieldCheck, ThumbsUp, Wallet } from "lucide-react";
+import { ArrowLeft, CalendarCheck, Camera, Clock, Coins, Gift, Repeat, ShieldCheck, ThumbsUp, Wallet } from "lucide-react";
 import { authOptions } from "@/lib/auth";
 import {
   HOLD_DAYS,
   MAX_HELPFUL_POINTS_PER_REVIEW,
+  MAX_REFERRALS_PER_DAY,
   MAX_REWARDED_REVIEWS_PER_DAY,
   PAYOUT_RUPEES,
   POINTS,
@@ -18,11 +19,23 @@ import { PayoutProgress } from "@/components/rewards/PayoutProgress";
 import { SignInPrompt } from "@/components/auth/SignInPrompt";
 import { Footer } from "@/components/layout/Footer";
 import { brand } from "@/lib/brand";
+import { prisma } from "@/lib/prisma";
+import { SITE_URL } from "@/lib/site";
+import { inviteUrl } from "@/lib/referral";
+import { InviteCard } from "@/components/rewards/InviteCard";
 
 export const metadata = { title: "My Rewards — KiraayaSense", robots: { index: false } };
 export const dynamic = "force-dynamic";
 
-const KIND_LABELS = { VERIFIED_REVIEW: "Verified review", PHOTO: "Photo bonus", HELPFUL_VOTE: "Marked helpful" } as const;
+const KIND_LABELS = {
+  VERIFIED_REVIEW: "Verified review",
+  PHOTO: "Photo bonus",
+  HELPFUL_VOTE: "Marked helpful",
+  SIGNUP: "Welcome bonus for joining",
+  REFERRAL: "A friend joined with your link",
+  DAILY_OPEN: "Opened the app",
+} as const;
+const fmtMonth = (d: Date) => d.toLocaleDateString("en-IN", { month: "short", year: "numeric" });
 const fmtDate = (d: Date) => d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 
 export default async function RewardsPage() {
@@ -38,14 +51,25 @@ export default async function RewardsPage() {
     );
   }
 
-  const summary = await rewardsSummary(session.user.id);
+  const [summary, me] = await Promise.all([
+    rewardsSummary(session.user.id),
+    prisma.user.findUnique({ where: { id: session.user.id }, select: { referralCode: true } }),
+  ]);
+  const invite = me?.referralCode ? inviteUrl(SITE_URL, me.referralCode) : null;
   const { payoutsReady } = payoutProgress(summary.available, summary.pending);
   const now = new Date();
-  // Helpful votes on one review on one day show as a single "×N" row.
+  // Helpful votes on one review on one day show as a single "×N" row, and
+  // daily-open points as one row per month.
   const history: (RewardsSummary["history"][number] & { count: number })[] = [];
   for (const e of summary.history) {
     const last = history[history.length - 1];
-    if (last && last.kind === e.kind && last.business.id === e.business.id && fmtDate(last.createdAt) === fmtDate(e.createdAt)) {
+    const sameGroup =
+      last &&
+      last.kind === e.kind &&
+      (e.kind === "DAILY_OPEN"
+        ? fmtMonth(last.createdAt) === fmtMonth(e.createdAt)
+        : last.business?.id === e.business?.id && fmtDate(last.createdAt) === fmtDate(e.createdAt));
+    if (last && sameGroup) {
       last.points += e.points;
       last.count++;
     } else history.push({ ...e, count: 1 });
@@ -110,6 +134,8 @@ export default async function RewardsPage() {
           />
         </section>
 
+        {invite && <InviteCard url={invite} points={POINTS.REFERRAL} value={formatRupees(POINTS.REFERRAL)} joined={summary.referrals} welcome={POINTS.SIGNUP} />}
+
         <section className="rounded-xl border p-4" style={{ borderColor: "var(--ks-border)", background: "var(--ks-bg-elevated)" }}>
           <h2 className="text-sm font-semibold text-[var(--ks-text)]">Earn more</h2>
           <ul className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -125,6 +151,12 @@ export default async function RewardsPage() {
             <Nudge icon={<Repeat size={16} />} points={POINTS.VERIFIED_REVIEW} title="Review a new visit">
               Stayed again? Add a new visit 30 days after the last one.
             </Nudge>
+            <Nudge icon={<CalendarCheck size={16} />} points={POINTS.DAILY_OPEN} title="Open KiraayaSense every day">
+              Signed in, once a day. Turn on notifications for a 7 PM reminder if you haven&apos;t opened it yet.
+            </Nudge>
+            <Nudge icon={<Gift size={16} />} points={POINTS.REFERRAL} title="Invite a friend">
+              When they join with your link. They get {POINTS.SIGNUP} points for joining too.
+            </Nudge>
           </ul>
           <Link
             href="/search"
@@ -139,7 +171,7 @@ export default async function RewardsPage() {
           <h2 className="mb-3 text-sm font-semibold text-[var(--ks-text)]">History</h2>
           {history.length === 0 ? (
             <div className="rounded-xl border p-6 text-center text-sm" style={{ borderColor: "var(--ks-border)", color: "var(--ks-text-faint)" }}>
-              No points yet. Write a review with proof (a bill, receipt or UPI payment) to earn your first {POINTS.VERIFIED_REVIEW}.
+              No points yet. Write a review with proof (a bill, receipt or UPI payment) to earn {POINTS.VERIFIED_REVIEW}.
             </div>
           ) : (
             <ul className="divide-y rounded-xl border" style={{ borderColor: "var(--ks-border)", background: "var(--ks-bg-elevated)" }}>
@@ -148,10 +180,16 @@ export default async function RewardsPage() {
                   <div className="min-w-0">
                     <p className="text-sm text-[var(--ks-text)]">
                       {KIND_LABELS[e.kind]}
-                      {e.count > 1 && ` ×${e.count}`} ·{" "}
-                      <Link href={`/property/${e.business.id}`} className="hover:underline">
-                        {e.business.name}
-                      </Link>
+                      {e.count > 1 && ` ×${e.count}`}
+                      {e.business && (
+                        <>
+                          {" "}
+                          ·{" "}
+                          <Link href={`/property/${e.business.id}`} className="hover:underline">
+                            {e.business.name}
+                          </Link>
+                        </>
+                      )}
                     </p>
                     <p className="flex items-center gap-1 text-[11px] text-[var(--ks-text-faint)]">
                       {fmtDate(e.createdAt)}
@@ -189,6 +227,12 @@ export default async function RewardsPage() {
             <li>Points are the same whatever rating you give. Honest reviews, good or bad, earn the same.</li>
             <li>You can add a new visit to the same business every 30 days. Each verified visit earns points again.</li>
             <li>Up to {MAX_REWARDED_REVIEWS_PER_DAY} reviews a day earn points. Points are removed if a review is later taken down.</li>
+            <li>{POINTS.SIGNUP} points as a welcome bonus when you join.</li>
+            <li>{POINTS.DAILY_OPEN} point for opening the app while signed in, once a day (India time).</li>
+            <li>
+              {POINTS.REFERRAL} points for each friend who joins with your invite link, up to {MAX_REFERRALS_PER_DAY} a day. Only new accounts
+              count, you can&apos;t invite yourself, and the points are removed if that account is later blocked for misuse.
+            </li>
           </ul>
         </section>
       </div>
