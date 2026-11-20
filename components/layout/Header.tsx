@@ -3,12 +3,14 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Search, UserCircle2, LogOut, Store, ShieldCheck, PlayCircle } from "lucide-react";
+import { Search, UserCircle2, LogOut, Store, ShieldCheck, PlayCircle, LayoutDashboard, PlusCircle, BadgeCheck } from "lucide-react";
 import { Bell } from "@/components/notifications/Bell";
 import { useAuth } from "@/lib/authContext";
 import { SignInModal } from "@/components/auth/SignInModal";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { LanguageSwitcher } from "@/components/layout/LanguageSwitcher";
+import { ModeSwitch } from "@/components/layout/ModeSwitch";
+import { useMode } from "@/lib/modeContext";
 import { useT } from "@/lib/i18n/client";
 import { brand, brandGradient } from "@/lib/brand";
 
@@ -22,6 +24,8 @@ export function Header({ navCategories }: { navCategories: { slug: string; name:
   const showSearch = pathname !== "/";
   const t = useT();
   const isAdmin = user?.role === "SUPER_ADMIN" || user?.role === "MODERATOR";
+  const { mode } = useMode();
+  const business = mode === "business";
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +42,7 @@ export function Header({ navCategories }: { navCategories: { slug: string; name:
         style={{ background: brand.navy, borderColor: "var(--ks-border-soft)" }}
       >
         <div className="mx-auto flex max-w-6xl items-center gap-6 px-4 py-3 sm:px-6">
-          <Link href="/" className="shrink-0 text-lg font-bold tracking-tight">
+          <Link href={business ? "/owner" : "/"} className="shrink-0 text-lg font-bold tracking-tight">
             <span style={{ color: brand.white }}>Kiraaya</span>
             <span
               style={{
@@ -75,11 +79,12 @@ export function Header({ navCategories }: { navCategories: { slug: string; name:
               <PlayCircle size={14} style={{ color: "var(--ks-coral)" }} />
               {t("nav.tutorials")}
             </Link>
-            {navCategories.slice(0, 2).map((c) => (
+            {!business && navCategories.slice(0, 2).map((c) => (
               <Link
                 key={c.slug}
                 href={`/search?category=${c.slug}`}
-                className="whitespace-nowrap text-xs font-medium text-[var(--ks-text-muted)] transition-colors hover:text-[var(--ks-text)]"
+                // Only on wide screens: the Customer / Business switch needs the room more.
+                className="hidden whitespace-nowrap text-xs font-medium text-[var(--ks-text-muted)] transition-colors hover:text-[var(--ks-text)] 2xl:inline"
               >
                 {c.name}
               </Link>
@@ -87,16 +92,8 @@ export function Header({ navCategories }: { navCategories: { slug: string; name:
           </nav>
 
           <div className="ms-auto flex shrink-0 items-center gap-2 sm:gap-3">
-            {/* Shown to everyone, signed in or not: the way in for owners to claim and manage a listing. */}
-            <Link
-              href="/for-businesses"
-              className="flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-1.5 text-xs font-semibold transition-colors hover:bg-white/5 sm:px-3"
-              style={{ borderColor: "var(--ks-coral)", color: "var(--ks-text)" }}
-            >
-              <Store size={14} style={{ color: "var(--ks-coral)" }} />
-              <span className="sm:hidden">{t("nav.forBusinessesShort")}</span>
-              <span className="hidden sm:inline">{t("nav.forBusinesses")}</span>
-            </Link>
+            {/* Customer / Business switch, like the theme toggle (components/layout/ModeSwitch.tsx). */}
+            <ModeSwitch />
             <div className="hidden sm:block">
               <LanguageSwitcher />
             </div>
@@ -148,6 +145,38 @@ export function Header({ navCategories }: { navCategories: { slug: string; name:
             )}
           </div>
         </div>
+
+        {business && (
+          <nav
+            aria-label={t("mode.businessNav")}
+            className="border-t"
+            style={{ borderColor: "var(--ks-border-soft)", background: "color-mix(in oklch, var(--ks-coral) 10%, transparent)" }}
+          >
+            <div className="mx-auto flex max-w-6xl items-center gap-4 overflow-x-auto px-4 py-1.5 text-xs font-semibold sm:px-6">
+              <span className="flex shrink-0 items-center gap-1" style={{ color: "var(--ks-coral)" }}>
+                <Store size={13} /> {t("mode.businessOn")}
+              </span>
+              {[
+                { href: "/owner", label: t("mode.yourBusinesses"), icon: LayoutDashboard },
+                { href: "/for-businesses", label: t("mode.claim"), icon: BadgeCheck },
+                { href: "/business/new", label: t("biz.addCta"), icon: PlusCircle },
+              ].map(({ href, label, icon: Icon }) => {
+                const active = href === "/owner" ? pathname === "/owner" || pathname.startsWith("/owner/") : pathname === href;
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    className="flex shrink-0 items-center gap-1 whitespace-nowrap transition-colors hover:text-[var(--ks-text)]"
+                    style={{ color: active ? "var(--ks-text)" : "var(--ks-text-muted)" }}
+                    aria-current={active ? "page" : undefined}
+                  >
+                    <Icon size={13} /> {label}
+                  </Link>
+                );
+              })}
+            </div>
+          </nav>
+        )}
 
         {/* Mobile search row. On the home page only the phone language picker remains. */}
         <form

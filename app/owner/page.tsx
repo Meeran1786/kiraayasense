@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getServerSession } from "next-auth";
-import { BadgeCheck, Building2, MessageSquareReply } from "lucide-react";
+import { BadgeCheck, Building2, Clock, MessageSquareReply, PlusCircle, Search, XCircle } from "lucide-react";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { managedProperties } from "@/lib/owner";
@@ -15,6 +15,18 @@ export default async function OwnerHomePage() {
   const session = await getServerSession(authOptions);
   const userId = session?.user?.id;
   const properties = userId ? await managedProperties(userId) : [];
+  // Claims still waiting on a moderator, or turned down in the last 30 days, so the owner knows where they stand.
+  const claims = userId
+    ? await prisma.businessClaim.findMany({
+        where: {
+          userId,
+          OR: [{ status: "PENDING" }, { status: "REJECTED", reviewedAt: { gte: new Date(Date.now() - 30 * 86400000) } }],
+        },
+        include: { property: { select: { id: true, name: true } } },
+        orderBy: { createdAt: "desc" },
+        take: 10,
+      })
+    : [];
   const ids = properties.map((p) => p.id);
   const [reviewCounts, unanswered] = ids.length
     ? await Promise.all([
@@ -43,20 +55,65 @@ export default async function OwnerHomePage() {
               </p>
             </div>
 
+            {claims.length > 0 && (
+              <section className="flex flex-col gap-2">
+                <h2 className="text-sm font-semibold text-[var(--ks-text)]">Your claims</h2>
+                <ul className="flex flex-col gap-2">
+                  {claims.map((c) => (
+                    <li
+                      key={c.id}
+                      className="flex items-center gap-3 rounded-xl border p-3 text-sm"
+                      style={{ borderColor: "var(--ks-border)", background: "var(--ks-bg-elevated)" }}
+                    >
+                      {c.status === "PENDING" ? (
+                        <Clock size={16} className="shrink-0" style={{ color: "var(--ks-warn)" }} />
+                      ) : (
+                        <XCircle size={16} className="shrink-0" style={{ color: "var(--ks-danger)" }} />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <Link href={`/property/${c.property.id}`} className="block truncate font-semibold text-[var(--ks-text)] hover:underline">
+                          {c.property.name}
+                        </Link>
+                        <p className="text-xs text-[var(--ks-text-faint)]">
+                          {c.status === "PENDING"
+                            ? "Waiting for a moderator to check your proof. This usually takes a day or two."
+                            : `Not approved${c.decisionNote ? `: ${c.decisionNote}` : ""}. You can claim again with clearer proof.`}
+                        </p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
             {properties.length === 0 ? (
-              <div className="rounded-xl border p-6 text-sm text-[var(--ks-text-muted)]" style={{ borderColor: "var(--ks-border)", background: "var(--ks-bg-elevated)" }}>
-                <p className="font-semibold text-[var(--ks-text)]">You don't manage a business here yet.</p>
-                <p className="mt-1">
-                  Find your business with{" "}
-                  <Link href="/search" className="underline">
-                    search
-                  </Link>{" "}
-                  and press <em>Claim this listing</em> on its page. Once a moderator confirms you run it, it appears here.
+              <div className="flex flex-col gap-4 rounded-xl border p-6 text-sm text-[var(--ks-text-muted)]" style={{ borderColor: "var(--ks-border)", background: "var(--ks-bg-elevated)" }}>
+                <div>
+                  <p className="font-semibold text-[var(--ks-text)]">Claim your business to unlock the owner tools.</p>
+                  <p className="mt-1">
+                    Search for it below, open its page and press <em>Claim this listing</em>. Once a moderator confirms you
+                    run it, you can reply to reviews, invite customers and show your rating badge from here.
+                  </p>
+                </div>
+                <form action="/search" method="get" className="flex flex-col gap-2 sm:flex-row">
+                  <label className="flex flex-1 items-center gap-2 rounded-full border px-3 py-2" style={{ borderColor: "var(--ks-border-strong)", background: "var(--ks-bg-input)" }}>
+                    <Search size={15} />
+                    <input
+                      name="q"
+                      required
+                      placeholder="Your business name, locality or PIN"
+                      className="w-full bg-transparent text-sm text-[var(--ks-text)] placeholder:text-[var(--ks-text-faint)] focus:outline-none"
+                    />
+                  </label>
+                  <button type="submit" className="rounded-full px-4 py-2 text-sm font-bold" style={{ background: "var(--ks-coral)", color: "var(--ks-bg)" }}>
+                    Find my business
+                  </button>
+                </form>
+                <p>
                   Not listed yet?{" "}
-                  <Link href="/business/new" className="underline">
-                    Add it
+                  <Link href="/business/new" className="inline-flex items-center gap-1 font-semibold text-[var(--ks-text)] underline">
+                    <PlusCircle size={13} /> Add your business
                   </Link>
-                  .
                 </p>
               </div>
             ) : (
