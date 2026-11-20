@@ -224,6 +224,9 @@ model User {
   // Per alert type: { "<type>": { "email": bool, "whatsapp": bool } }; missing = default (lib/notify/types.ts).
   notificationPrefs      Json?
   lastSeenAt             DateTime?
+  // Invite link code (kiraayasense.com/?ref=<code>), and who invited this user.
+  referralCode           String?           @unique
+  referredById           String?           @db.Uuid
   createdAt              DateTime          @default(now())
   updatedAt              DateTime          @updatedAt
 
@@ -243,6 +246,10 @@ model User {
   helpfulVotes        HelpfulVote[]
   assistantUsage      AssistantUsage[]
   notifications       Notification[]
+  referredBy          User?            @relation("Referrals", fields: [referredById], references: [id], onDelete: SetNull)
+  referrals           User[]           @relation("Referrals")
+  pointSources        PointEvent[]     @relation("PointSource")
+  pushSubscriptions   PushSubscription[]
   phoneVerifications  PhoneVerification[]
   sentAdminInvites    AdminInvite[]    @relation("AdminInviter")
 
@@ -871,6 +878,9 @@ enum PointKind {
   VERIFIED_REVIEW // a review approved with at least one approved proof
   PHOTO // bonus when that review also has an approved photo
   HELPFUL_VOTE // someone marked the verified review helpful
+  SIGNUP // welcome bonus, once per account
+  REFERRAL // someone joined with this user's invite link
+  DAILY_OPEN // opened the app (signed in) on an IST calendar day
 }
 
 /// "Helpful" taps on a review: one per signed-in user per review.
@@ -892,7 +902,11 @@ model HelpfulVote {
 model PointEvent {
   id          String    @id @default(uuid()) @db.Uuid
   userId      String    @db.Uuid
-  reviewId    String    @db.Uuid
+  // Set for review points; null for SIGNUP, REFERRAL and DAILY_OPEN.
+  reviewId    String?   @db.Uuid
+  // REFERRAL only: the person who joined. Their points stop counting if that
+  // account is suspended or banned.
+  sourceUserId String?  @db.Uuid
   kind        PointKind
   points      Int
   // e.g. "VERIFIED_REVIEW:<reviewId>" or "HELPFUL_VOTE:<reviewId>:<voterId>",
@@ -901,10 +915,12 @@ model PointEvent {
   availableAt DateTime
   createdAt   DateTime  @default(now())
 
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  user       User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  review     Review? @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  sourceUser User?   @relation("PointSource", fields: [sourceUserId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
+  @@index([userId, kind, createdAt])
   @@index([reviewId, kind])
   @@map("point_events")
 }
@@ -927,4 +943,22 @@ model AssistantUsage {
   @@id([userId, day])
   @@index([day])
   @@map("assistant_usage")
+}
+
+/// Web push subscriptions, one per browser/device a user turned alerts on in.
+/// Deleted when the push service says the subscription is gone (404/410).
+model PushSubscription {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+  lastOkAt  DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("push_subscriptions")
 }

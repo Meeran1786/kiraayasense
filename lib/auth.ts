@@ -2,7 +2,12 @@ import "server-only";
 import type { AuthOptions, Session } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import { prisma } from "@/lib/prisma";
+import { cookies } from "next/headers";
 import { uniqueHandle } from "@/lib/db/users";
+import { awardSignup, newReferralCode, POINTS, formatRupees } from "@/lib/rewards";
+import { notifyUsers } from "@/lib/notify";
+import { REFERRAL_COOKIE } from "@/lib/referral";
+import { ADMIN_ROLES, SUPER_ADMIN_SECTIONS } from "@/lib/roles";
 
 /**
  * Real Google OAuth 2.0 sign-in (FR-AUTH-1). We deliberately do NOT use
@@ -44,12 +49,13 @@ export const authOptions: AuthOptions = {
       // displayName is set from Google only on first sign-in; after that it
       // belongs to the reviewer, who can change it on /profile.
       const existing = await prisma.user.findUnique({ where: { primaryEmail: user.email } });
-      await prisma.user.upsert({
+      const saved = await prisma.user.upsert({
         where: { primaryEmail: user.email },
         update: {
           avatarStorageKey: user.image ?? undefined,
           primaryEmailVerifiedAt: new Date(),
           handle: existing?.handle ? undefined : await uniqueHandle(user.email),
+          referralCode: existing?.referralCode ? undefined : newReferralCode(),
         },
         create: {
           displayName: user.name ?? user.email,
@@ -57,8 +63,34 @@ export const authOptions: AuthOptions = {
           primaryEmail: user.email,
           primaryEmailVerifiedAt: new Date(),
           avatarStorageKey: user.image ?? undefined,
+          referralCode: newReferralCode(),
         },
       });
+
+      // A brand-new account: 50-point welcome bonus, and 5 points to whoever
+      // invited them (the ?ref= code is kept in a cookie by ReferralCapture).
+      if (!existing) {
+        let ref: string | null = null;
+        try {
+          ref = cookies().get(REFERRAL_COOKIE)?.value ?? null;
+        } catch {
+          // No request context (shouldn't happen inside the auth route).
+        }
+        const result = await prisma
+          .$transaction((tx) => awardSignup(tx, saved.id, ref))
+          .catch((e) => {
+            console.error("[rewards] sign-up points", e);
+            return null;
+          });
+        if (result?.referrerId) {
+          notifyUsers([result.referrerId], {
+            type: "POINTS_CREDITED",
+            title: `A friend joined: +${POINTS.REFERRAL} points`,
+            body: `${saved.displayName} joined KiraayaSense with your invite link, so you earned ${POINTS.REFERRAL} points (${formatRupees(POINTS.REFERRAL)}). They are on the usual 30-day hold.`,
+            link: "/profile/rewards",
+          });
+        }
+      }
 
       // Admin access granted on the Team page before this person first
       // signed in (app/admin/team). Applied once, then marked accepted.
@@ -128,14 +160,7 @@ export const authOptions: AuthOptions = {
   },
 };
 
-export const ADMIN_ROLES = ["MODERATOR", "SUPER_ADMIN"] as const;
-
-/**
- * Admin areas only a SUPER_ADMIN may open (pages and their /api/admin routes).
- * Moderators keep reviews, reports, owner replies, claims and businesses.
- * Enforced in middleware.ts; the sidebar only hides what this already blocks.
- */
-export const SUPER_ADMIN_SECTIONS = ["team", "activity", "banners", "imports", "categories", "question-sets"] as const;
+export { ADMIN_ROLES, SUPER_ADMIN_SECTIONS };
 
 export function isAdminSession(session: Session | null): boolean {
   return !!session?.user && (ADMIN_ROLES as readonly string[]).includes(session.user.role ?? "");

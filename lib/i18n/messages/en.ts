@@ -226,6 +226,17 @@ const en = {
   "bell.labelUnread": "Notifications, {n} new",
   "bell.settings": "Alert settings",
   "bell.empty": "No notifications yet.",
+
+  "home.nearMe": "Places near me",
+  "home.locating": "Finding you…",
+  "daily.toast": "+{n} point for opening KiraayaSense today",
+  "daily.toastHint": "Come back tomorrow for another.",
+  "push.title": "Never miss your daily point",
+  "push.body": "Turn on notifications for an evening reminder, and alerts when your reviews are approved or points arrive.",
+  "push.iosBody": "On iPhone, tap Share, then Add to Home Screen, and open KiraayaSense from there to turn on notifications.",
+  "push.turnOn": "Turn on",
+  "push.notNow": "Not now",
+  "push.denied": "Notifications are blocked. Allow them in your browser's site settings.",
 };
 
 export type Messages = typeof en;

@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Mail, MessageCircle, Check } from "lucide-react";
+import { Loader2, Mail, MessageCircle, Check, Smartphone } from "lucide-react";
 import { brand, brandGradient } from "@/lib/brand";
-import { ALERT_TYPES, type AlertType, type ChannelPrefs } from "@/lib/notify/types";
+import { ALERT_TYPES, isPushOnly, type AlertType, type ChannelPrefs } from "@/lib/notify/types";
+import { pushState, turnOffPush, turnOnPush, type PushState } from "@/lib/pushClient";
 
 type Props = {
   types: AlertType[];
@@ -13,6 +14,7 @@ type Props = {
   phone: string | null; // masked, only when verified
   whatsappOn: boolean;
   whatsappReady: boolean; // the site has WhatsApp set up
+  pushReady: boolean; // the site has web push set up
 };
 
 const GROUPS: { audience: string; title: string }[] = [
@@ -21,7 +23,7 @@ const GROUPS: { audience: string; title: string }[] = [
   { audience: "user", title: "Your reviews and points" },
 ];
 
-/** The "Alerts" card on /profile: per-alert email and WhatsApp switches, and WhatsApp number verification. */
+/** The "Alerts" card on /profile: per-alert email, WhatsApp and push switches, WhatsApp number verification and push on this device. */
 export function AlertSettings(props: Props) {
   const router = useRouter();
   const [prefs, setPrefs] = useState(props.prefs);
@@ -48,6 +50,8 @@ export function AlertSettings(props: Props) {
     }
   };
 
+  const cols = props.pushReady ? "grid-cols-[1fr_auto_auto_auto]" : "grid-cols-[1fr_auto_auto]";
+
   const setWhatsapp = async (on: boolean) => {
     if (await save({ whatsapp: on })) setWhatsappOn(on);
   };
@@ -58,6 +62,8 @@ export function AlertSettings(props: Props) {
         Every alert also shows on the bell at the top of the site. Emails go to {props.email ?? "your Google address"}.
       </p>
 
+      {props.pushReady && <ThisDevice />}
+
       <WhatsAppNumber {...props} whatsappOn={whatsappOn} onToggle={setWhatsapp} onVerified={() => { setWhatsappOn(true); router.refresh(); }} />
 
       {GROUPS.map((g) => {
@@ -65,21 +71,32 @@ export function AlertSettings(props: Props) {
         if (!rows.length) return null;
         return (
           <div key={g.audience}>
-            <div className="mb-1 grid grid-cols-[1fr_auto_auto] items-center gap-3 text-[11px] font-semibold uppercase tracking-wide text-[var(--ks-text-faint)]">
+            <div className={`mb-1 grid ${cols} items-center gap-3 text-[11px] font-semibold uppercase tracking-wide text-[var(--ks-text-faint)]`}>
               <span>{g.title}</span>
               <span className="flex w-16 items-center justify-center gap-1"><Mail size={12} /> Email</span>
               <span className="flex w-16 items-center justify-center gap-1"><MessageCircle size={12} /> WhatsApp</span>
+              {props.pushReady && <span className="flex w-16 items-center justify-center gap-1"><Smartphone size={12} /> Push</span>}
             </div>
             {rows.map((t) => (
-              <div key={t} className="grid grid-cols-[1fr_auto_auto] items-center gap-3 border-t py-2 text-sm" style={{ borderColor: "var(--ks-border-soft)" }}>
+              <div key={t} className={`grid ${cols} items-center gap-3 border-t py-2 text-sm`} style={{ borderColor: "var(--ks-border-soft)" }}>
                 <span className="text-[var(--ks-text)]">{ALERT_TYPES[t].label}</span>
-                <Switch on={prefs[t].email} onClick={() => toggle(t, "email")} label={`Email: ${ALERT_TYPES[t].label}`} />
-                <Switch
-                  on={prefs[t].whatsapp && whatsappOn}
-                  disabled={!whatsappOn}
-                  onClick={() => toggle(t, "whatsapp")}
-                  label={`WhatsApp: ${ALERT_TYPES[t].label}`}
-                />
+                {isPushOnly(t) ? (
+                  <>
+                    <Dash />
+                    <Dash />
+                  </>
+                ) : (
+                  <>
+                    <Switch on={prefs[t].email} onClick={() => toggle(t, "email")} label={`Email: ${ALERT_TYPES[t].label}`} />
+                    <Switch
+                      on={prefs[t].whatsapp && whatsappOn}
+                      disabled={!whatsappOn}
+                      onClick={() => toggle(t, "whatsapp")}
+                      label={`WhatsApp: ${ALERT_TYPES[t].label}`}
+                    />
+                  </>
+                )}
+                {props.pushReady && <Switch on={prefs[t].push} onClick={() => toggle(t, "push")} label={`Push: ${ALERT_TYPES[t].label}`} />}
               </div>
             ))}
           </div>
@@ -87,6 +104,55 @@ export function AlertSettings(props: Props) {
       })}
 
       {msg && <span className="text-xs" style={{ color: msg.ok ? brand.success : brand.danger }}>{msg.text}</span>}
+    </div>
+  );
+}
+
+const Dash = () => <span className="flex w-16 justify-center text-[var(--ks-text-faint)]">–</span>;
+
+/** Push notifications on this browser or installed app. */
+function ThisDevice() {
+  const [state, setState] = useState<PushState | null>(null);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    pushState().then(setState).catch(() => setState("unsupported"));
+  }, []);
+  if (!state || state === "off-site") return null;
+
+  const run = async (fn: () => Promise<PushState>) => {
+    setBusy(true);
+    setState(await fn().catch(() => "unsupported" as const));
+    setBusy(false);
+  };
+  const text: Record<PushState, string> = {
+    on: "Notifications are on for this device.",
+    off: "Notifications are off for this device.",
+    default: "Get alerts and the 7 PM daily-point reminder as notifications on this device.",
+    denied: "Notifications are blocked for this site. Allow them in your browser's site settings, then reload.",
+    "ios-install": "On iPhone, tap Share, then Add to Home Screen, and open KiraayaSense from there to turn on notifications.",
+    unsupported: "This browser can't show notifications.",
+    "off-site": "",
+  };
+  return (
+    <div className="flex flex-wrap items-center gap-3 rounded-lg border p-3" style={{ borderColor: "var(--ks-border-soft)" }}>
+      <Smartphone size={15} style={{ color: state === "on" ? brand.success : "var(--ks-text-muted)" }} />
+      <span className="min-w-0 flex-1 text-sm text-[var(--ks-text)]">{text[state]}</span>
+      {(state === "default" || state === "off") && (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => run(turnOnPush)}
+          className="flex items-center gap-2 rounded-xl px-4 py-1.5 text-sm font-bold text-slate-950 disabled:opacity-50"
+          style={{ background: brandGradient }}
+        >
+          {busy && <Loader2 size={14} className="animate-spin" />} Turn on
+        </button>
+      )}
+      {state === "on" && (
+        <button type="button" disabled={busy} onClick={() => run(turnOffPush)} className="text-xs text-[var(--ks-text-muted)] hover:underline">
+          Turn off here
+        </button>
+      )}
     </div>
   );
 }

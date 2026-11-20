@@ -142,6 +142,15 @@ sends the admin summary, the day's "helpful" digest and the points credited.
 Its log is `/home/kiraaya/alerts.log`. To run it by hand:
 `bash /home/kiraaya/app/deploy/daily-alerts.sh`.
 
+**Push notifications and the 7 PM reminder.** `deploy.sh` creates a VAPID key
+pair (`VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`) in `.env` once; never replace
+it, or every device has to turn notifications on again. People turn push on
+from the prompt after sign-in or in Profile → Alerts; every alert then also
+arrives as a phone/desktop notification. A second cron job at 13:30 UTC
+(7:00 PM IST) calls `/api/cron/daily-reminder`, which pushes "You're missing
+out on your point today" to anyone with push on who hasn't opened the app
+that day. By hand: `bash /home/kiraaya/app/deploy/daily-reminder.sh`.
+
 ## Backups
 
 - `deploy/backup.sh` runs nightly at 03:30 IST: a `pg_dump` plus the uploaded

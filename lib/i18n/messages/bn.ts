@@ -203,6 +203,17 @@ const bn: Partial<Messages> = {
   "bell.labelUnread": "বিজ্ঞপ্তি, {n}টি নতুন",
   "bell.settings": "অ্যালার্ট সেটিংস",
   "bell.empty": "এখনও কোনো বিজ্ঞপ্তি নেই।",
+
+  "home.nearMe": "আমার কাছাকাছি জায়গা",
+  "home.locating": "আপনার অবস্থান খোঁজা হচ্ছে…",
+  "daily.toast": "আজ KiraayaSense খোলার জন্য +{n} পয়েন্ট",
+  "daily.toastHint": "কাল আবার আসুন, আরেকটি পাবেন।",
+  "push.title": "রোজকার পয়েন্ট কখনও হারাবেন না",
+  "push.body": "সন্ধ্যায় মনে করিয়ে দেওয়া, আর রিভিউ অনুমোদন বা পয়েন্ট পাওয়ার খবরের জন্য নোটিফিকেশন চালু করুন।",
+  "push.iosBody": "iPhone-এ Share চাপুন, তারপর Add to Home Screen, আর সেখান থেকে KiraayaSense খুলে নোটিফিকেশন চালু করুন।",
+  "push.turnOn": "চালু করুন",
+  "push.notNow": "এখন নয়",
+  "push.denied": "নোটিফিকেশন বন্ধ আছে। ব্রাউজারের সাইট সেটিংসে অনুমতি দিন।",
 };
 
 export default bn;

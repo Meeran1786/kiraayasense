@@ -1,10 +1,11 @@
 import "server-only";
 import type { DeliveryStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { ADMIN_ROLES } from "@/lib/auth";
+import { ADMIN_ROLES } from "@/lib/roles";
 import { ALERT_TYPES, DIGEST_TYPES, channelPrefs, type AlertType } from "./types";
 import { emailConfigured, sendEmail } from "./email";
 import { sendTemplate, whatsappConfigured, type WhatsAppTemplate } from "./whatsapp";
+import { pushConfigured, sendPush } from "./push";
 
 /**
  * One call per event: writes a bell entry for each recipient, then sends
@@ -54,6 +55,8 @@ export function plan(r: Recipient, type: AlertType, urgent = false, hasTemplate 
   return {
     email: wantEmail && emailConfigured() ? (digest ? "PENDING" : "SEND") : "SKIP",
     whatsapp: wantWa && whatsappConfigured() ? (digest ? "PENDING" : "SEND") : "SKIP",
+    // Digest pushes go out with the 9 AM run, like the email and WhatsApp.
+    push: prefs.push && pushConfigured() ? (digest ? "LATER" : "SEND") : "SKIP",
   } as const;
 }
 
@@ -65,6 +68,7 @@ async function deliver(recipients: Recipient[], alert: Alert) {
     let whatsappStatus: DeliveryStatus = p.whatsapp === "PENDING" ? "PENDING" : "SKIPPED";
     if (p.email === "SEND") emailStatus = (await sendEmail(r.primaryEmail!, alert.title, alert.body, alert.link)) ? "SENT" : "FAILED";
     if (p.whatsapp === "SEND") whatsappStatus = (await sendTemplate(r.primaryPhone!, alert.whatsapp!)) ? "SENT" : "FAILED";
+    if (p.push === "SEND") await sendPush(r.id, { title: alert.title, body: alert.body, link: alert.link, tag: alert.type });
     await prisma.notification.create({
       data: {
         userId: r.id,

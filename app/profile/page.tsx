@@ -10,10 +10,11 @@ import { brand } from "@/lib/brand";
 import { managedProperties } from "@/lib/owner";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { ADMIN_ROLES } from "@/lib/auth";
+import { ADMIN_ROLES } from "@/lib/roles";
 import { AlertSettings } from "@/components/profile/AlertSettings";
 import { ALERT_TYPES, channelPrefs, type AlertType } from "@/lib/notify/types";
 import { whatsappConfigured } from "@/lib/notify/whatsapp";
+import { pushConfigured } from "@/lib/notify/push";
 import { maskPhone } from "@/lib/notify/phone";
 import { pointsBalance } from "@/lib/rewards";
 import { RewardsTeaser } from "@/components/rewards/RewardsTeaser";
@@ -106,5 +107,6 @@ async function alertSettings(userId: string, managesBusiness: boolean) {
     phone: verified ? maskPhone(u.primaryPhone!) : null,
     whatsappOn: verified && !!u.whatsappOptInAt,
     whatsappReady: whatsappConfigured(),
+    pushReady: pushConfigured(),
   };
 }

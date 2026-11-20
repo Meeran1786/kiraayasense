@@ -7,7 +7,7 @@ import { ALERT_TYPES, isAlertType, type AlertPrefs } from "@/lib/notify/types";
 export const dynamic = "force-dynamic";
 
 /**
- * PATCH { prefs?: { TYPE: { email?, whatsapp? } }, whatsapp?: boolean }
+ * PATCH { prefs?: { TYPE: { email?, whatsapp?, push? } }, whatsapp?: boolean }
  * saves the per-alert switches and the overall WhatsApp opt-in. Opting in
  * needs a verified phone.
  */
@@ -30,6 +30,7 @@ export async function PATCH(req: NextRequest) {
       const next = { ...prefs[type] };
       if (typeof v.email === "boolean") next.email = v.email;
       if (typeof v.whatsapp === "boolean") next.whatsapp = v.whatsapp;
+      if (typeof v.push === "boolean") next.push = v.push;
       prefs[type] = next;
     }
   }
