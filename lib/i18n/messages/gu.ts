@@ -203,6 +203,17 @@ const gu: Partial<Messages> = {
   "bell.labelUnread": "સૂચનાઓ, {n} નવી",
   "bell.settings": "એલર્ટ સેટિંગ્સ",
   "bell.empty": "હજુ કોઈ સૂચના નથી.",
+
+  "home.nearMe": "મારી નજીકની જગ્યાઓ",
+  "home.locating": "તમારું સ્થાન શોધી રહ્યા છીએ…",
+  "daily.toast": "આજે KiraayaSense ખોલવા બદલ +{n} પોઇન્ટ",
+  "daily.toastHint": "કાલે ફરી આવો અને બીજો મેળવો.",
+  "push.title": "તમારો રોજનો પોઇન્ટ ક્યારેય ચૂકશો નહીં",
+  "push.body": "સાંજે યાદ અપાવવા માટે, અને રિવ્યૂ મંજૂર થાય કે પોઇન્ટ મળે ત્યારે અલર્ટ માટે સૂચનાઓ ચાલુ કરો.",
+  "push.iosBody": "iPhone પર Share દબાવો, પછી Add to Home Screen, અને ત્યાંથી KiraayaSense ખોલીને સૂચનાઓ ચાલુ કરો.",
+  "push.turnOn": "ચાલુ કરો",
+  "push.notNow": "હમણાં નહીં",
+  "push.denied": "સૂચનાઓ બંધ છે. બ્રાઉઝરની સાઇટ સેટિંગ્સમાં મંજૂરી આપો.",
 };
 
 export default gu;

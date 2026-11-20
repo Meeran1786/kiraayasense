@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { PlayCircle, Search } from "lucide-react";
+import { Loader2, LocateFixed, PlayCircle, Search } from "lucide-react";
 import { brand, brandGradient } from "@/lib/brand";
 import { useT } from "@/lib/i18n/client";
 
@@ -19,6 +19,36 @@ export function SearchHero({
   const t = useT();
   const [q, setQ] = useState("");
   const [category, setCategory] = useState("");
+  const [locating, setLocating] = useState(false);
+  const [geoError, setGeoError] = useState<string | null>(null);
+
+  // Location is asked for only when someone taps "Places near me", never on page load.
+  const nearMe = () => {
+    if (!("geolocation" in navigator)) {
+      setGeoError(t("filter.noGeo"));
+      return;
+    }
+    setLocating(true);
+    setGeoError(null);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const params = new URLSearchParams({
+          // About 100 m: enough to search, and the URL never carries an exact position.
+          lat: pos.coords.latitude.toFixed(3),
+          lng: pos.coords.longitude.toFixed(3),
+          km: "5",
+          sort: "nearest",
+        });
+        if (category) params.set("category", category);
+        router.push(`/search?${params.toString()}`);
+      },
+      () => {
+        setLocating(false);
+        setGeoError(t("filter.geoDenied"));
+      },
+      { timeout: 10000, maximumAge: 300000 }
+    );
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,6 +111,19 @@ export function SearchHero({
           {t("home.search")}
         </button>
       </form>
+      <div className="mt-3 flex flex-col items-center gap-1">
+        <button
+          type="button"
+          onClick={nearMe}
+          disabled={locating}
+          className="inline-flex items-center gap-1.5 rounded-full border px-4 py-1.5 text-xs font-semibold text-[var(--ks-text)] hover:opacity-90 disabled:opacity-60"
+          style={{ borderColor: "var(--ks-border-strong)", background: "var(--ks-bg-elevated)" }}
+        >
+          {locating ? <Loader2 size={14} className="animate-spin" /> : <LocateFixed size={14} style={{ color: "var(--ks-coral)" }} />}
+          {locating ? t("home.locating") : t("home.nearMe")}
+        </button>
+        {geoError && <p className="text-xs" style={{ color: "var(--ks-text-muted)" }}>{geoError}</p>}
+      </div>
       <Link
         href="/tutorials"
         className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--ks-text-muted)] hover:text-[var(--ks-text)]"

@@ -1,11 +1,12 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
-import { ADMIN_ROLES } from "@/lib/auth";
+import { ADMIN_ROLES } from "@/lib/roles";
 import { SITE_URL } from "@/lib/site";
-import { formatRupees } from "@/lib/rewards";
+import { formatRupees, LIVE_POINTS } from "@/lib/rewards";
 import { recipientSelect, deliverNow, plan } from "./index";
 import { sendEmail } from "./email";
 import { sendTemplate } from "./whatsapp";
+import { sendPush } from "./push";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -63,8 +64,9 @@ export async function runDailyAlerts(now = new Date()) {
 
   // 2. Helpful digest: the day's HELPFUL bell entries left PENDING per channel
   const pending = await prisma.notification.findMany({
-    where: { type: "HELPFUL", OR: [{ emailStatus: "PENDING" }, { whatsappStatus: "PENDING" }] },
-    select: { id: true, userId: true, emailStatus: true, whatsappStatus: true },
+    // Pending email/WhatsApp, or new since yesterday (for the push digest).
+    where: { type: "HELPFUL", OR: [{ emailStatus: "PENDING" }, { whatsappStatus: "PENDING" }, { createdAt: { gt: since } }] },
+    select: { id: true, userId: true, emailStatus: true, whatsappStatus: true, createdAt: true },
   });
   const byUser = new Map<string, typeof pending>();
   for (const n of pending) byUser.set(n.userId, [...(byUser.get(n.userId) ?? []), n]);
@@ -80,6 +82,7 @@ export async function runDailyAlerts(now = new Date()) {
     let waOk: boolean | null = null;
     if (n > 0 && rows.some((r) => r.emailStatus === "PENDING") && p.email !== "SKIP" && user.primaryEmail)
       emailOk = await sendEmail(user.primaryEmail, "Your reviews are helping people", text, link);
+    if (n > 0 && p.push !== "SKIP" && rows.some((r) => r.createdAt > since)) await sendPush(userId, { title: "Your reviews are helping people", body: text, link, tag: "HELPFUL" });
     if (n > 0 && rows.some((r) => r.whatsappStatus === "PENDING") && p.whatsapp !== "SKIP" && user.primaryPhone)
       waOk = await sendTemplate(user.primaryPhone, { name: "ks_helpful_digest", params: [String(n), `${SITE_URL}${link}`] });
     const ids = rows.map((r) => r.id);
@@ -97,7 +100,8 @@ export async function runDailyAlerts(now = new Date()) {
   // 3. Points that finished their 30-day hold in the last day
   const cleared = await prisma.pointEvent.groupBy({
     by: ["userId"],
-    where: { availableAt: { gt: since, lte: now }, review: { status: "APPROVED" } },
+    // Daily-open points are left out: a "1 point is now yours" alert every day would be noise.
+    where: { availableAt: { gt: since, lte: now }, kind: { not: "DAILY_OPEN" }, ...LIVE_POINTS },
     _sum: { points: true },
   });
   for (const row of cleared) {

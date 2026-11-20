@@ -203,6 +203,17 @@ const ur: Partial<Messages> = {
   "bell.labelUnread": "اطلاعات، {n} نئی",
   "bell.settings": "الرٹ کی ترتیبات",
   "bell.empty": "ابھی کوئی اطلاع نہیں۔",
+
+  "home.nearMe": "میرے آس پاس کی جگہیں",
+  "home.locating": "آپ کا مقام تلاش ہو رہا ہے…",
+  "daily.toast": "آج KiraayaSense کھولنے پر +{n} پوائنٹ",
+  "daily.toastHint": "کل پھر آئیں اور ایک اور پائیں۔",
+  "push.title": "اپنا روزانہ پوائنٹ کبھی نہ چھوڑیں",
+  "push.body": "شام کی یاد دہانی، اور ریویو منظور ہونے یا پوائنٹ ملنے پر الرٹ کے لیے نوٹیفکیشن آن کریں۔",
+  "push.iosBody": "iPhone پر Share دبائیں، پھر Add to Home Screen چنیں، اور وہاں سے KiraayaSense کھول کر نوٹیفکیشن آن کریں۔",
+  "push.turnOn": "آن کریں",
+  "push.notNow": "ابھی نہیں",
+  "push.denied": "نوٹیفکیشن بند ہیں۔ براؤزر کی سائٹ سیٹنگز میں اجازت دیں۔",
 };
 
 export default ur;

@@ -3,10 +3,12 @@ import type { PointKind, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 /**
- * Review rewards. Points are earned only for verified reviews (approved with
- * at least one approved proof), never depend on the star rating, and become
- * available 30 days after they are earned. Points stop counting if their
- * review is later suspended or rejected.
+ * Rewards. Review points are earned only for verified reviews (approved with
+ * at least one approved proof), never depend on the star rating, and stop
+ * counting if their review is later suspended or rejected. There are also
+ * account points: a welcome bonus on sign-up, a referral bonus when someone
+ * joins with your invite link, and a point for opening the app each day.
+ * Every point becomes available 30 days after it is earned.
  *
  * Points have a fixed cash value: every POINTS_PER_PAYOUT available points
  * can be redeemed for PAYOUT_RUPEES (1,000 points = ₹100, so ₹0.10 a point),
@@ -16,7 +18,9 @@ import { prisma } from "@/lib/prisma";
  * or clicks.
  */
 
-export const POINTS = { VERIFIED_REVIEW: 10, PHOTO: 5, HELPFUL_VOTE: 1 } as const;
+export const POINTS = { VERIFIED_REVIEW: 10, PHOTO: 5, HELPFUL_VOTE: 1, SIGNUP: 50, REFERRAL: 5, DAILY_OPEN: 1 } as const;
+/** Referral bonuses one person can earn per IST day (guards against account farming). */
+export const MAX_REFERRALS_PER_DAY = 10;
 export const MAX_HELPFUL_POINTS_PER_REVIEW = 20;
 export const MAX_REWARDED_REVIEWS_PER_DAY = 10;
 export const HOLD_DAYS = 30;
@@ -58,16 +62,108 @@ export const reviewsWithPhotoFor = (points: number) =>
   Math.ceil(points / (POINTS.VERIFIED_REVIEW + POINTS.PHOTO));
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const IST_MS = 5.5 * 60 * 60 * 1000;
 const availableFrom = (now: Date) => new Date(now.getTime() + HOLD_DAYS * DAY_MS);
+
+/** Start of the IST calendar day that `d` falls in. */
+export const istDayStart = (d: Date) => new Date(Math.floor((d.getTime() + IST_MS) / DAY_MS) * DAY_MS - IST_MS);
+/** "2026-11-20" for the IST day that `d` falls in. */
+export const istDayKey = (d: Date) => new Date(d.getTime() + IST_MS).toISOString().slice(0, 10);
 
 type Tx = Prisma.TransactionClient;
 
-async function give(tx: Tx, userId: string, reviewId: string, kind: PointKind, dedupeKey: string, now: Date) {
-  await tx.pointEvent.upsert({
-    where: { dedupeKey },
-    update: {},
-    create: { userId, reviewId, kind, points: POINTS[kind], dedupeKey, availableAt: availableFrom(now) },
+async function give(
+  tx: Tx,
+  userId: string,
+  reviewId: string | null,
+  kind: PointKind,
+  dedupeKey: string,
+  now: Date,
+  sourceUserId: string | null = null
+): Promise<boolean> {
+  // createMany + skipDuplicates is an INSERT … ON CONFLICT DO NOTHING, so two
+  // racing requests can never both earn the same reward.
+  const { count } = await tx.pointEvent.createMany({
+    data: [{ userId, reviewId, sourceUserId, kind, points: POINTS[kind], dedupeKey, availableAt: availableFrom(now) }],
+    skipDuplicates: true,
   });
+  return count > 0;
+}
+
+/** Turns "ab12 cd34" or a full invite URL's code into the stored form, or null. */
+export function normalizeReferralCode(raw: unknown): string | null {
+  if (typeof raw !== "string") return null;
+  const code = raw.trim().toUpperCase();
+  return /^[A-Z0-9]{6,12}$/.test(code) ? code : null;
+}
+
+/** A fresh 8-character invite code (no 0/O/1/I, so it reads aloud cleanly). */
+export function newReferralCode(): string {
+  const alphabet = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
+  const bytes = crypto.getRandomValues(new Uint8Array(8));
+  return Array.from(bytes, (b) => alphabet[b % alphabet.length]).join("");
+}
+
+export type SignupResult = { signup: number; referrerId: string | null };
+
+/**
+ * Call once, when a brand-new account is created on first Google sign-in.
+ * Gives the welcome bonus and, if the person arrived through an invite link,
+ * links them to the inviter and gives the inviter the referral bonus.
+ *
+ * Abuse guards: only new accounts can be referred (an existing account can't
+ * attach a referrer later); nobody can refer themselves; the inviter must be
+ * active; at most MAX_REFERRALS_PER_DAY bonuses per inviter per IST day; and
+ * referral points stop counting if the new account is later suspended or
+ * banned. Google sign-in already ties each account to one verified Google
+ * address, and every point is held for 30 days before it can be redeemed.
+ */
+export async function awardSignup(tx: Tx, userId: string, referralCode: string | null, now = new Date()): Promise<SignupResult> {
+  const signedUp = await give(tx, userId, null, "SIGNUP", `SIGNUP:${userId}`, now);
+  const result: SignupResult = { signup: signedUp ? POINTS.SIGNUP : 0, referrerId: null };
+
+  const code = normalizeReferralCode(referralCode);
+  if (!code) return result;
+  const [me, referrer] = await Promise.all([
+    tx.user.findUnique({ where: { id: userId }, select: { referredById: true, primaryEmail: true } }),
+    tx.user.findUnique({ where: { referralCode: code }, select: { id: true, status: true, primaryEmail: true } }),
+  ]);
+  if (!me || me.referredById || !referrer || referrer.id === userId || referrer.status !== "ACTIVE") return result;
+  if (me.primaryEmail && referrer.primaryEmail && sameMailbox(me.primaryEmail, referrer.primaryEmail)) return result;
+
+  await tx.user.update({ where: { id: userId }, data: { referredById: referrer.id } });
+  const today = istDayStart(now);
+  const todays = await tx.pointEvent.count({ where: { userId: referrer.id, kind: "REFERRAL", createdAt: { gte: today } } });
+  if (todays >= MAX_REFERRALS_PER_DAY) return result;
+  if (await give(tx, referrer.id, null, "REFERRAL", `REFERRAL:${userId}`, now, userId)) result.referrerId = referrer.id;
+  return result;
+}
+
+/** Gmail ignores dots and "+tags", so a.b+x@gmail.com is the same inbox as ab@gmail.com. */
+export function sameMailbox(a: string, b: string): boolean {
+  const canon = (e: string) => {
+    const [local, domain = ""] = e.toLowerCase().split("@");
+    const d = domain === "googlemail.com" ? "gmail.com" : domain;
+    const l = local.split("+")[0];
+    return `${d === "gmail.com" ? l.replace(/\./g, "") : l}@${d}`;
+  };
+  return canon(a) === canon(b);
+}
+
+/**
+ * The daily point for opening the app while signed in: one per IST calendar
+ * day. Safe to call on every page load; repeat calls the same day do nothing.
+ */
+export async function claimDailyOpen(userId: string, now = new Date()): Promise<{ awarded: boolean; points: number; day: string }> {
+  const day = istDayKey(now);
+  const awarded = await prisma.$transaction((tx) => give(tx, userId, null, "DAILY_OPEN", `DAILY_OPEN:${userId}:${day}`, now));
+  return { awarded, points: awarded ? POINTS.DAILY_OPEN : 0, day };
+}
+
+/** Whether this person already has today's (IST) daily point. */
+export async function hasDailyOpen(userId: string, now = new Date()): Promise<boolean> {
+  const hit = await prisma.pointEvent.findUnique({ where: { dedupeKey: `DAILY_OPEN:${userId}:${istDayKey(now)}` }, select: { id: true } });
+  return !!hit;
 }
 
 /** Call inside the moderation transaction after a review is approved. */
@@ -81,8 +177,7 @@ export async function awardApprovedReview(tx: Tx, reviewId: string, now = new Da
 
   // At most MAX_REWARDED_REVIEWS_PER_DAY reviews earn points per day (IST),
   // counted by the day each review was written.
-  const ist = 5.5 * 60 * 60 * 1000;
-  const dayStart = new Date(Math.floor((review.createdAt.getTime() + ist) / DAY_MS) * DAY_MS - ist);
+  const dayStart = istDayStart(review.createdAt);
   const sameDay = await tx.pointEvent.count({
     where: {
       userId: review.userId,
@@ -145,8 +240,19 @@ export async function setHelpful(reviewId: string, voterId: string, helpful: boo
   });
 }
 
-// Only events whose review is still approved count.
-const liveEvents = (userId: string): Prisma.PointEventWhereInput => ({ userId, review: { status: "APPROVED" } });
+/**
+ * Points that still count: review points while their review is approved,
+ * referral points while the person who joined is active, and sign-up and
+ * daily points always.
+ */
+export const LIVE_POINTS: Prisma.PointEventWhereInput = {
+  OR: [
+    { reviewId: { not: null }, review: { is: { status: "APPROVED" } } },
+    { kind: "REFERRAL", sourceUser: { is: { status: "ACTIVE" } } },
+    { kind: { in: ["SIGNUP", "DAILY_OPEN"] } },
+  ],
+};
+const liveEvents = (userId: string): Prisma.PointEventWhereInput => ({ userId, ...LIVE_POINTS });
 
 export async function totalPoints(userId: string): Promise<number> {
   const agg = await prisma.pointEvent.aggregate({ where: liveEvents(userId), _sum: { points: true } });
@@ -169,8 +275,7 @@ export async function pointsBalance(userId: string, now = new Date()) {
   let next: { at: Date; points: number } | null = null;
   if (nextUnlock) {
     // Everything that unlocks on the same (IST) day as the earliest held point.
-    const ist = 5.5 * 60 * 60 * 1000;
-    const dayEnd = new Date(Math.floor((nextUnlock.availableAt.getTime() + ist) / DAY_MS + 1) * DAY_MS - ist);
+    const dayEnd = new Date(istDayStart(nextUnlock.availableAt).getTime() + DAY_MS);
     const sameDay = await prisma.pointEvent.aggregate({
       where: { ...liveEvents(userId), availableAt: { gt: now, lt: dayEnd } },
       _sum: { points: true },
@@ -191,12 +296,15 @@ export interface RewardsSummary {
     points: number;
     createdAt: Date;
     availableAt: Date;
-    business: { id: string; name: string };
+    /** The reviewed business, for review points; null for account points. */
+    business: { id: string; name: string } | null;
   }[];
+  /** People who joined with this user's invite link. */
+  referrals: number;
 }
 
 export async function rewardsSummary(userId: string, now = new Date()): Promise<RewardsSummary> {
-  const [balance, history] = await Promise.all([
+  const [balance, history, referrals] = await Promise.all([
     pointsBalance(userId, now),
     prisma.pointEvent.findMany({
       where: liveEvents(userId),
@@ -204,6 +312,7 @@ export async function rewardsSummary(userId: string, now = new Date()): Promise<
       take: 100,
       include: { review: { select: { property: { select: { id: true, name: true } } } } },
     }),
+    prisma.user.count({ where: { referredById: userId } }),
   ]);
   return {
     ...balance,
@@ -213,8 +322,9 @@ export async function rewardsSummary(userId: string, now = new Date()): Promise<
       points: e.points,
       createdAt: e.createdAt,
       availableAt: e.availableAt,
-      business: e.review.property,
+      business: e.review?.property ?? null,
     })),
+    referrals,
   };
 }
 
