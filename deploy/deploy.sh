@@ -2,8 +2,10 @@
 # Ships the latest main to this server. Run as the kiraaya user, either by
 # hand or by .github/workflows/deploy.yml over SSH.
 #
-# Order matters: back up, then migrate, then build, then reload. If the build
-# fails the old build keeps serving (PM2 is only reloaded at the end).
+# Order matters: back up, then migrate, then build, then reload. The build
+# goes into .next-build, never into the .next the running site reads from, so
+# visitors don't see "Application error" pages while it builds, and a failed
+# build (out of memory, say) leaves the old site serving untouched.
 set -euo pipefail
 cd /home/kiraaya/app
 
@@ -38,7 +40,19 @@ if ! grep -q '^VAPID_PRIVATE_KEY=' .env; then
 fi
 
 echo "==> Building"
-npm run build
+rm -rf .next-build
+NEXT_BUILD_DIR=.next-build npm run build
+
+echo "==> Swapping in the new build"
+# Keep the previous build's JS/CSS too: pages already open in a browser still
+# ask for the old file names until they reload.
+# Files already in the new build are left alone (same name, same content);
+# -p keeps the old ones' dates, so those over a week old can be dropped.
+if [ -d .next/static ]; then cp -rp --update=none .next/static/. .next-build/static/; fi
+find .next-build/static -type f -mtime +7 -delete
+rm -rf .next-old
+if [ -d .next ]; then mv .next .next-old; fi
+mv .next-build .next
 
 echo "==> Reloading"
 pm2 startOrReload deploy/ecosystem.config.js --update-env
