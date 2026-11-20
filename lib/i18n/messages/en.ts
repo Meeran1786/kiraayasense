@@ -227,6 +227,16 @@ const en = {
   "bell.settings": "Alert settings",
   "bell.empty": "No notifications yet.",
 
+  "mode.label": "Use KiraayaSense as",
+  "mode.customer": "Customer",
+  "mode.business": "Business",
+  "mode.businessOn": "Business mode",
+  "mode.businessNav": "Business tools",
+  "mode.yourBusinesses": "Your businesses",
+  "mode.claim": "Claim a listing",
+  "mode.profileTitle": "Customer or business",
+  "mode.profileBody": "Switch like light and dark mode. Customer mode is for finding and writing reviews. Business mode puts your owner tools first: replies, invites, QR poster and your rating badge.",
+
   "home.nearMe": "Places near me",
   "home.locating": "Finding you…",
   "daily.toast": "+{n} point for opening KiraayaSense today",

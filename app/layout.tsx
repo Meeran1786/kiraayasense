@@ -2,6 +2,9 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/lib/authContext";
 import { ThemeProvider, THEME_INIT_SCRIPT } from "@/lib/themeContext";
+import { cookies } from "next/headers";
+import { ModeProvider } from "@/lib/modeContext";
+import { MODE_COOKIE, isAppMode } from "@/lib/mode";
 import { Header } from "@/components/layout/Header";
 import { ServiceWorker } from "@/components/layout/ServiceWorker";
 import { AskAssistant } from "@/components/assistant/AskAssistant";
@@ -41,9 +44,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const locale = getLocale();
   const messages = messagesFor(locale);
   const t = makeTranslator(locale, messages);
+  const savedMode = cookies().get(MODE_COOKIE)?.value;
+  // Customer / business switch (lib/mode.ts), read here so the first paint has the right header.
+  const initialMode = isAppMode(savedMode) ? savedMode : "customer";
 
   return (
-    <html lang={locale} dir={localeInfo(locale).dir}>
+    <html lang={locale} dir={localeInfo(locale).dir} data-mode={initialMode}>
       <head>
         {/* Sets data-theme before hydration so the correct palette paints on
             the first frame — see lib/themeContext.tsx for what this runs. */}
@@ -60,10 +66,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <ThemeProvider>
           <I18nProvider locale={locale} messages={messages}>
             <AuthProvider>
+              <ModeProvider initialMode={initialMode}>
               <Header navCategories={categories.map(({ slug, name }) => ({ slug, name: categoryName(t, slug, name) }))} />
               {children}
               {assistantEnabled() && <AskAssistant />}
               <DailyPoint />
+              </ModeProvider>
             </AuthProvider>
           </I18nProvider>
         </ThemeProvider>

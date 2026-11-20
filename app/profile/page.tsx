@@ -18,6 +18,8 @@ import { pushConfigured } from "@/lib/notify/push";
 import { maskPhone } from "@/lib/notify/phone";
 import { pointsBalance } from "@/lib/rewards";
 import { RewardsTeaser } from "@/components/rewards/RewardsTeaser";
+import { ModeSwitch } from "@/components/layout/ModeSwitch";
+import { getT } from "@/lib/i18n/server";
 
 export const metadata = { title: "Your profile — KiraayaSense" };
 
@@ -27,6 +29,7 @@ export default async function OwnProfilePage() {
   const managed = session?.user?.id ? await managedProperties(session.user.id) : [];
   const alerts = session?.user?.id ? await alertSettings(session.user.id, managed.length > 0) : null;
   const balance = session?.user?.id ? await pointsBalance(session.user.id) : null;
+  const t = getT();
 
   return (
     <main style={{ background: brand.navy, minHeight: "100vh" }}>
@@ -47,6 +50,16 @@ export default async function OwnProfilePage() {
                 <span className="mt-0.5 block text-xs text-[var(--ks-text-muted)]">Open your owner tools →</span>
               </Link>
             )}
+            <section
+              className="flex flex-col gap-3 rounded-xl border p-4"
+              style={{ borderColor: "var(--ks-border)", background: "var(--ks-bg-elevated)" }}
+            >
+              <div>
+                <h2 className="text-sm font-semibold text-[var(--ks-text)]">{t("mode.profileTitle")}</h2>
+                <p className="mt-0.5 text-xs text-[var(--ks-text-muted)]">{t("mode.profileBody")}</p>
+              </div>
+              <ModeSwitch size="lg" />
+            </section>
             <section>
               <h2 className="mb-3 text-sm font-semibold text-[var(--ks-text)]">Edit profile</h2>
               <ProfileEditor
