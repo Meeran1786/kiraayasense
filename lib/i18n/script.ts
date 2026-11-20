@@ -1,3 +1,5 @@
+import type { Locale } from "@/lib/i18n/locales";
+
 /**
  * Which writing system a piece of text is mostly in. Used to decide whether
  * a review needs a "Translate to English" button without asking a server.
@@ -51,3 +53,25 @@ export const LOCALE_SCRIPT: Record<string, Script> = {
   ta: "tamil",
   te: "telugu",
 };
+
+// Letters and words common in Marathi but rare in Hindi, so a Devanagari
+// review that is probably Marathi still offers "Translate to Hindi".
+const MARATHI_HINT = /ळ|आहे|नाही|आणि|होते|खूप|मला|आम्ही|तुम्ही|केले|चांगल/;
+
+/**
+ * Which languages a review can be translated into with one tap, in button
+ * order. A review in an Indian script (Tamil, Telugu, Kannada, Bengali,
+ * Urdu…) gets English and Hindi; one in Devanagari gets English, plus Hindi
+ * when it looks like Marathi. The reader's site language is added when it
+ * is in a different script from the review, which also gives English and
+ * Hinglish reviews a Hindi button on the Hindi site.
+ */
+export function translateTargets(text: string, siteLocale: Locale): Locale[] {
+  const script = dominantScript(text);
+  if (!script) return [];
+  const targets: Locale[] = [];
+  if (script !== "latin") targets.push("en");
+  if (script !== "latin" && (script !== "devanagari" || MARATHI_HINT.test(text))) targets.push("hi");
+  if (!targets.includes(siteLocale) && LOCALE_SCRIPT[siteLocale] !== script) targets.push(siteLocale);
+  return targets;
+}
