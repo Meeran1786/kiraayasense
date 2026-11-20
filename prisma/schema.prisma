@@ -587,7 +587,7 @@ model ReviewTranslation {
   targetLang String // ISO 639-1, e.g. "en"
   sourceLang String? // as detected by the provider
   texts      Json
-  provider   String // "azure" or "google"
+  provider   String // "azure", "google" or "claude"
   createdAt  DateTime @default(now())
 
   review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
