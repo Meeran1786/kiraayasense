@@ -39,6 +39,11 @@ if ! grep -q '^VAPID_PRIVATE_KEY=' .env; then
   node -e 'const k=require("web-push").generateVAPIDKeys();console.log(`VAPID_PUBLIC_KEY="${k.publicKey}"\nVAPID_PRIVATE_KEY="${k.privateKey}"`)' >> .env
 fi
 
+# IndexNow key (lib/indexnow.ts); create one once and keep it.
+if ! grep -q '^INDEXNOW_KEY=' .env; then
+  echo "INDEXNOW_KEY=\"$(node -e 'console.log(require("crypto").randomBytes(16).toString("hex"))')\"" >> .env
+fi
+
 echo "==> Building"
 rm -rf .next-build
 NEXT_BUILD_DIR=.next-build npm run build
@@ -57,5 +62,17 @@ mv .next-build .next
 echo "==> Reloading"
 pm2 startOrReload deploy/ecosystem.config.js --update-env
 pm2 save
+
+# Tell Bing and other IndexNow engines the main pages may have changed.
+# Best effort: a failed ping never fails the deploy.
+KEY=$(grep '^INDEXNOW_KEY=' .env | cut -d= -f2- | tr -d '"' || true)
+SITE=$(grep '^NEXTAUTH_URL=' .env | cut -d= -f2- | tr -d '"' | sed 's:/*$::' || true)
+SITE=${SITE:-https://kiraayasense.com}
+if [ -n "$KEY" ]; then
+  sleep 5
+  curl -s -m 15 -o /dev/null -w "IndexNow: %{http_code}\n" -X POST https://api.indexnow.org/indexnow \
+    -H 'Content-Type: application/json; charset=utf-8' \
+    -d "{\"host\":\"${SITE#https://}\",\"key\":\"$KEY\",\"keyLocation\":\"$SITE/indexnow-key.txt\",\"urlList\":[\"$SITE/\",\"$SITE/guides\",\"$SITE/about\",\"$SITE/search\",\"$SITE/llms.txt\"]}" || true
+fi
 
 echo "Deployed $(git rev-parse --short HEAD)"

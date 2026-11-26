@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { pingIndexNow } from "@/lib/indexnow";
 import { onClaimDecided } from "@/lib/notify/events";
 
 const decisionSchema = z.object({
@@ -56,5 +57,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   });
 
   onClaimDecided(claim.id, approve);
+  // An owner-verified listing is indexable (lib/sitemap.ts).
+  if (approve) pingIndexNow([`/property/${claim.propertyId}`]);
   return NextResponse.json({ ok: true });
 }
