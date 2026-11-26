@@ -12,7 +12,7 @@ import { WriteReviewGate } from "@/components/property/WriteReviewGate";
 import { Footer } from "@/components/layout/Footer";
 import { SourceCredit } from "@/components/property/SourceCredit";
 import { brand } from "@/lib/brand";
-import { SITE_URL } from "@/lib/site";
+import { SHARE_IMAGE, SITE_NAME, SITE_URL } from "@/lib/site";
 import { propertySummary } from "@/lib/geo";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -39,7 +39,8 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
     title,
     description,
     alternates: { canonical: `/property/${p.id}` },
-    openGraph: { title, description, url: `/property/${p.id}`, type: "website" },
+    // A page's openGraph replaces the layout's whole, so the image is repeated here.
+    openGraph: { title, description, url: `/property/${p.id}`, type: "website", siteName: SITE_NAME, locale: "en_IN", images: [SHARE_IMAGE] },
   };
 }
 

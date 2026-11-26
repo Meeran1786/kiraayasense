@@ -12,7 +12,7 @@ import { DailyPoint } from "@/components/rewards/DailyPoint";
 import { ReferralCapture } from "@/components/rewards/ReferralCapture";
 import { assistantEnabled } from "@/lib/assistant/config";
 import { getCategoryTree } from "@/lib/db/categories";
-import { SITE_NAME, SITE_URL } from "@/lib/site";
+import { SHARE_IMAGE, SITE_NAME, SITE_URL } from "@/lib/site";
 import { I18nProvider } from "@/lib/i18n/client";
 import { getLocale } from "@/lib/i18n/server";
 import { localeInfo } from "@/lib/i18n/locales";
@@ -30,8 +30,8 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: "KiraayaSense — honest, proof-backed reviews",
   description: DESCRIPTION,
-  openGraph: { type: "website", siteName: SITE_NAME, locale: "en_IN", description: DESCRIPTION },
-  twitter: { card: "summary" },
+  openGraph: { type: "website", siteName: SITE_NAME, locale: "en_IN", description: DESCRIPTION, images: [SHARE_IMAGE] },
+  twitter: { card: "summary", images: [SHARE_IMAGE.url] },
   applicationName: SITE_NAME,
   appleWebApp: { capable: true, title: SITE_NAME, statusBarStyle: "black-translucent" },
   icons: { icon: "/icons/icon.svg", apple: "/icons/apple-touch-icon.png" },

@@ -51,6 +51,21 @@ async function describe(p: Params, localityName?: string) {
   return { category, place };
 }
 
+/**
+ * The canonical URL of a category/place page. Spaces are written as %20,
+ * exactly as lib/sitemap.ts writes them: URLSearchParams would write "+", and
+ * Google then treats the sitemap URL and the canonical as two different pages
+ * ("Alternate page with proper canonical tag" / "Google chose different canonical").
+ */
+function canonicalSearchPath(category?: string, state?: string, city?: string) {
+  const parts = [
+    ["category", category],
+    ["state", state],
+    ["city", city],
+  ].filter((kv): kv is [string, string] => !!kv[1]);
+  return parts.length ? `/search?${parts.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join("&")}` : "/search";
+}
+
 export async function generateMetadata({ searchParams }: SearchPageProps): Promise<Metadata> {
   const { category, place } = await describe(searchParams);
   // Category and city pages are worth indexing; free-text, rating, locality
@@ -71,16 +86,11 @@ export async function generateMetadata({ searchParams }: SearchPageProps): Promi
       : place
         ? `Businesses${where} — reviews | KiraayaSense`
         : "Browse businesses | KiraayaSense";
-  const canonical = new URLSearchParams();
-  if (category) canonical.set("category", category.slug);
-  if (searchParams.state) canonical.set("state", searchParams.state);
-  if (searchParams.city) canonical.set("city", searchParams.city);
+  const subject = category ? category.name : "local businesses";
   return {
     title,
-    description: category
-      ? `Compare ${category.name}${where} on honest, proof-backed reviews from real customers, tenants and employees.`
-      : undefined,
-    alternates: { canonical: canonical.size ? `/search?${canonical.toString()}` : "/search" },
+    description: `Compare ${subject}${where} on honest, proof-backed reviews from real customers, tenants and employees.`,
+    alternates: { canonical: canonicalSearchPath(category?.slug, searchParams.state, searchParams.city) },
     robots: indexable ? undefined : { index: false, follow: true },
   };
 }
@@ -117,21 +127,21 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
 
   // Answer-shaped Q&A for category and place pages (GEO): AI answer engines
   // quote these, and FAQPage markup tells them what each answer is for.
-  const subject = `${category ? category.name.toLowerCase() : "businesses"} ${place}`.trim();
+  const subject = `${category ? category.name.toLowerCase() : "business"} ${place}`.trim();
   const best = topRated(results);
   const faq =
     !searchParams.q && (category || place) && results.length > 0
       ? [
           {
-            q: `Which ${subject} have the best reviews?`,
+            q: `Which ${subject} has the best reviews?`,
             a: best.length
               ? `On KiraayaSense the best rated are ${best
                   .map((p) => `${p.name} (${p.overallRating.toFixed(1)}/5 from ${p.approvedReviewCount} review${p.approvedReviewCount === 1 ? "" : "s"})`)
                   .join(", ")}.`
-              : `None of the ${subject} listed on KiraayaSense have reviews yet. Be the first to write one.`,
+              : `No ${category ? `${category.name.toLowerCase()} listing` : "business"} ${place} has reviews on KiraayaSense yet. Be the first to write one.`.replace(/\s+/g, " "),
           },
           {
-            q: `How many ${subject} are listed on KiraayaSense?`,
+            q: `How many ${category ? `${category.name.toLowerCase()} listings` : "businesses"} ${place} are on KiraayaSense?`.replace(/\s+/g, " "),
             a:
               results.length >= SEARCH_LIMIT
                 ? `More than ${SEARCH_LIMIT}. Filter by locality to see them all.`
@@ -197,7 +207,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                     __html: JSON.stringify({
                       "@context": "https://schema.org",
                       "@type": "FAQPage",
-                      url: SITE_URL + "/search",
+                      url: SITE_URL + canonicalSearchPath(category?.slug, searchParams.state, searchParams.city),
                       mainEntity: faq.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
                     }).replace(/</g, "\\u003c"),
                   }}
