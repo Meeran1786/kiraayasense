@@ -20,6 +20,8 @@ const hi: Partial<Messages> = {
   "mode.profileBody": "लाइट और डार्क मोड की तरह बदलें। ग्राहक मोड समीक्षाएँ खोजने और लिखने के लिए है। व्यवसाय मोड में आपके मालिक टूल सबसे पहले दिखते हैं: जवाब, आमंत्रण, QR पोस्टर और रेटिंग बैज।",
   "home.watchTutorial": "नए हैं? देखें KiraayaSense कैसे काम करता है",
   "footer.tutorials": "वीडियो ट्यूटोरियल",
+  "footer.guides": "गाइड",
+  "footer.about": "हमारे बारे में",
   "tut.title": "KiraayaSense कैसे इस्तेमाल करें",
 
   "footer.disclaimer":

@@ -39,6 +39,11 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
     title,
     description,
     alternates: { canonical: `/property/${p.id}` },
+    // Listings nobody has reviewed yet look alike to search engines, and
+    // 3 lakh+ of them made Google judge the whole site as thin. They stay open
+    // to visitors and come back to search after their first approved review
+    // (or once an owner verifies them). Same rule as lib/sitemap.ts.
+    robots: p.approvedReviewCount > 0 || p.ownerVerified ? undefined : { index: false, follow: true },
     // A page's openGraph replaces the layout's whole, so the image is repeated here.
     openGraph: { title, description, url: `/property/${p.id}`, type: "website", siteName: SITE_NAME, locale: "en_IN", images: [SHARE_IMAGE] },
   };
