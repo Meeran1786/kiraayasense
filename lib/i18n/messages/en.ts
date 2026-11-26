@@ -208,6 +208,8 @@ const en = {
   "nav.tutorials": "How to use",
   "home.watchTutorial": "New here? Watch how KiraayaSense works",
   "footer.tutorials": "Video tutorials",
+  "footer.guides": "Guides",
+  "footer.about": "About",
   "tut.title": "How to use KiraayaSense",
   "tut.subtitle": "Short videos that show you how to find honest reviews, write your own and earn points, or claim your business and get more reviews.",
   "tut.everyone": "Quick tour",

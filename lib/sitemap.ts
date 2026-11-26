@@ -1,6 +1,8 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
 import { SITE_URL } from "@/lib/site";
+import { GUIDES } from "@/lib/guides";
+import type { Prisma } from "@prisma/client";
 
 /**
  * Sitemaps for search engines. /sitemap.xml is an index pointing at
@@ -30,8 +32,17 @@ export function sitemapIndex(files: string[]): string {
   return `<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${body}\n</sitemapindex>\n`;
 }
 
+/**
+ * Business pages worth sending to search engines: published, and either
+ * reviewed or owner-verified. Others are noindex (app/property/[id]/page.tsx).
+ */
+const INDEXABLE_BUSINESS: Prisma.PropertyWhereInput = {
+  status: "APPROVED",
+  OR: [{ reviews: { some: { status: "APPROVED" } } }, { claimStatus: "VERIFIED" }],
+};
+
 export async function sitemapFiles(): Promise<string[]> {
-  const count = await prisma.property.count({ where: { status: "APPROVED" } });
+  const count = await prisma.property.count({ where: INDEXABLE_BUSINESS });
   const pages = Math.max(1, Math.ceil(count / BUSINESSES_PER_FILE));
   return ["static.xml", ...Array.from({ length: pages }, (_, i) => `businesses-${i}.xml`)];
 }
@@ -101,6 +112,9 @@ export async function staticUrls(): Promise<SitemapUrl[]> {
     { path: "/search" },
     ...categories,
     { path: "/for-businesses" },
+    { path: "/about" },
+    { path: "/guides" },
+    ...GUIDES.map((g) => ({ path: `/guides/${g.slug}`, lastModified: new Date(g.updated) })),
     { path: "/tutorials" },
     { path: "/privacy" },
     { path: "/terms" },
@@ -110,7 +124,7 @@ export async function staticUrls(): Promise<SitemapUrl[]> {
 
 export async function businessUrls(page: number): Promise<SitemapUrl[]> {
   const rows = await prisma.property.findMany({
-    where: { status: "APPROVED" },
+    where: INDEXABLE_BUSINESS,
     select: { id: true, updatedAt: true },
     orderBy: { createdAt: "asc" },
     skip: page * BUSINESSES_PER_FILE,

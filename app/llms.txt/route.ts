@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { GUIDES } from "@/lib/guides";
 import { getCategoryTree } from "@/lib/db/categories";
 import { HOW_RATINGS_WORK } from "@/lib/geo";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
@@ -55,8 +56,13 @@ export async function GET() {
       .filter((c) => c.state && c.district)
       .map((c) => `- [${c.district}, ${c.state}](${q({ state: c.state, city: c.district })}): ${c._count._all.toLocaleString("en-IN")} businesses`),
     "",
-    "## Policies",
+    "## Guides",
     "",
+    ...GUIDES.map((g) => `- [${g.title}](${SITE_URL}/guides/${g.slug}): ${g.summary}`),
+    "",
+    "## About and policies",
+    "",
+    `- [About KiraayaSense](${SITE_URL}/about)`,
     `- [Privacy policy](${SITE_URL}/privacy)`,
     `- [Terms of use](${SITE_URL}/terms)`,
     "",
