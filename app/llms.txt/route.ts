@@ -32,7 +32,7 @@ export async function GET() {
     "",
     HOW_RATINGS_WORK,
     "",
-    "Each business page starts with a one-paragraph summary of its rating, how many reviews are verified with proof, and what reviewers rate highest and lowest. Business data from OpenStreetMap (ODbL), Overture Maps (CDLA-Permissive-2.0) and the MCA company register is credited on each page.",
+    "Each business page starts with a one-paragraph summary of its rating, how many reviews are verified with proof, and what reviewers rate highest and lowest.",
     "",
     "## Find businesses",
     "",

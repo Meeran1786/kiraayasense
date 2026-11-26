@@ -48,9 +48,13 @@ export default function TermsPage() {
 
       <h2>Business listings</h2>
       <p>
-        Some listings come from open data such as OpenStreetMap (© OpenStreetMap contributors, ODbL), and some are added
-        by users. Details may be out of date. Business owners can claim a listing to correct it. A claimed listing
-        can&apos;t remove or edit honest reviews.
+        Listings are added by users, by business owners and by our team. Details may be out of date. Business owners
+        can claim a listing to correct it. A claimed listing can&apos;t remove or edit honest reviews.
+      </p>
+      <p id="data-credits" className="text-xs" style={{ color: "var(--ks-text-faint)" }}>
+        Data credits: some listing details include data © OpenStreetMap contributors (
+        <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer nofollow">ODbL</a>),
+        Overture Maps Foundation (CDLA-Permissive-2.0) and the Ministry of Corporate Affairs via data.gov.in (GODL-India).
       </p>
 
       <h2>Reporting content</h2>

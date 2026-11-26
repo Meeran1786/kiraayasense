@@ -5,7 +5,7 @@ import { cleanPincode, cleanWebsite, usableName, type LocalityCandidate, type Pl
 /**
  * OpenStreetMap via the Overpass API. OSM data is © OpenStreetMap
  * contributors under the ODbL: every listing created from it shows that
- * credit (see components/property/SourceCredit.tsx).
+ * credit (see the Terms page, #data-credits).
  *
  * Only tags that map cleanly to one of our sub-categories are imported.
  * Employers such as OEMs and Tier-1 suppliers aren't reliably tagged in OSM;

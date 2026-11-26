@@ -200,7 +200,7 @@ export default async function PropertyDetailPage({ params }: { params: { id: str
               />
 
               <div className="mt-3">
-                <SourceCredit propertyId={property.id} source={property.source} ownerVerified={property.ownerVerified} />
+                <SourceCredit propertyId={property.id} ownerVerified={property.ownerVerified} />
               </div>
 
               <p className="mt-3 text-[11px] leading-relaxed" style={{ color: "var(--ks-text-faint)" }}>
