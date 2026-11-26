@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { awardApprovedReview } from "@/lib/rewards";
 import { onReviewDecided } from "@/lib/notify/events";
+import { pingIndexNow } from "@/lib/indexnow";
 
 const decisionSchema = z.discriminatedUnion("decision", [
   z.object({
@@ -76,5 +77,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   });
 
   onReviewDecided(review.id, input.decision === "APPROVE");
+  // The business page now has a new review (and may have just become indexable).
+  if (input.decision === "APPROVE") pingIndexNow([`/property/${review.propertyId}`]);
   return NextResponse.json({ ok: true });
 }
